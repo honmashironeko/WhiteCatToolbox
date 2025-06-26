@@ -1778,21 +1778,21 @@ class ToolConfigParser:
                 elif '=' in line and current_section and current_subsection:
                     
                     try:
-                        # 更精确的解析逻辑，找到最后一个等号作为必填标志
+                        
                         parts = line.split('=')
                         if len(parts) >= 3:
                             param_name = parts[0].strip()
                             display_name = parts[1].strip()
                             
-                            # 检查最后一部分是否为必填标志（0或1）
+                            
                             last_part = parts[-1].strip()
                             if last_part in ['0', '1'] and len(parts) >= 4:
-                                # 最后一部分是必填标志
+                                
                                 required = last_part
-                                # 描述是中间所有部分的组合
+                                
                                 description = '='.join(parts[2:-1]).strip()
                             else:
-                                # 没有必填标志，整个剩余部分都是描述
+                                
                                 description = '='.join(parts[2:]).strip()
                                 required = '0'
 
@@ -1837,7 +1837,7 @@ class ParameterEditDialog(QDialog):
         self.resize(480, 520)
         self.setModal(True)
         
-        # 设置对话框基础样式
+        
         self.setStyleSheet(f"""
             QDialog {{
                 background: qlineargradient(x1: 0, y1: 0, x2: 0, y2: 1,
@@ -1846,12 +1846,12 @@ class ParameterEditDialog(QDialog):
             }}
         """)
         
-        # 主布局
+        
         main_layout = QVBoxLayout(self)
         main_layout.setContentsMargins(20, 20, 20, 20)
         main_layout.setSpacing(16)
         
-        # 标题区域
+        
         title_layout = QHBoxLayout()
         title_layout.setSpacing(10)
         
@@ -1875,7 +1875,7 @@ class ParameterEditDialog(QDialog):
         
         main_layout.addLayout(title_layout)
         
-        # 分割线
+        
         line = QFrame()
         line.setFrameShape(QFrame.HLine)
         line.setFrameStyle(QFrame.Sunken)
@@ -1889,32 +1889,32 @@ class ParameterEditDialog(QDialog):
         """)
         main_layout.addWidget(line)
         
-        # 创建滚动区域
+        
         scroll_area = QScrollArea()
         scroll_area.setFrameShape(QFrame.NoFrame)
         scroll_area.setHorizontalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
         scroll_area.setVerticalScrollBarPolicy(Qt.ScrollBarAsNeeded)
         scroll_area.setWidgetResizable(True)
         
-        # 滚动内容容器
+        
         scroll_widget = QWidget()
         scroll_layout = QVBoxLayout(scroll_widget)
         scroll_layout.setContentsMargins(0, 0, 0, 0)
         scroll_layout.setSpacing(12)
         
-        # 创建表单
+        
         self.create_form_group(scroll_layout)
         
-        # 设置滚动区域
+        
         scroll_area.setWidget(scroll_widget)
         main_layout.addWidget(scroll_area)
         
-        # 按钮区域
+        
         button_layout = QHBoxLayout()
         button_layout.setSpacing(12)
         button_layout.addStretch()
         
-        # 取消按钮
+        
         cancel_btn = QPushButton("取消")
         cancel_btn.setFixedSize(80, 36)
         cancel_btn.setStyleSheet("""
@@ -1937,7 +1937,7 @@ class ParameterEditDialog(QDialog):
         cancel_btn.clicked.connect(self.reject)
         button_layout.addWidget(cancel_btn)
         
-        # 保存按钮
+        
         save_btn = QPushButton("保存")
         save_btn.setFixedSize(80, 36)
         save_btn.setStyleSheet("""
@@ -1963,28 +1963,28 @@ class ParameterEditDialog(QDialog):
         main_layout.addLayout(button_layout)
     
     def create_form_group(self, parent_layout):
-        """创建表单组"""
         
-        # 参数名称
+        
+        
         self.create_input_field(parent_layout, "参数名称", "name_edit", 
                                self.param_info.get('param_name', ''),
                                "例如：--target, -u, --url")
         
-        # 显示名称
+        
         self.create_input_field(parent_layout, "显示名称", "display_edit",
                                self.param_info.get('display_name', ''),
                                "例如：目标域名, 用户名, 输出文件")
         
-        # 参数描述
+        
         self.create_textarea_field(parent_layout, "参数描述", "desc_edit",
                                   self.param_info.get('description', ''),
                                   "详细描述参数的用途和用法...")
         
-        # 参数类型和必填设置并排布局
+        
         bottom_layout = QHBoxLayout()
         bottom_layout.setSpacing(16)
         
-        # 参数类型
+        
         type_layout = QVBoxLayout()
         type_layout.setSpacing(6)
         
@@ -2073,7 +2073,7 @@ class ParameterEditDialog(QDialog):
         """)
         type_layout.addWidget(self.type_combo)
         
-        # 必填设置
+        
         required_layout = QVBoxLayout()
         required_layout.setSpacing(6)
         
@@ -2126,14 +2126,14 @@ class ParameterEditDialog(QDialog):
         parent_layout.addLayout(bottom_layout)
     
     def create_input_field(self, parent_layout, title, edit_name, value, placeholder):
-        """创建简洁的输入字段"""
-        # 标题
+        
+        
         label = QLabel(title)
         label.setFont(QFont(get_system_font(), 10, QFont.Bold))
         label.setStyleSheet("color: #495057; font-weight: bold; margin-bottom: 4px;")
         parent_layout.addWidget(label)
         
-        # 输入框
+        
         edit = QLineEdit()
         edit.setText(value)
         edit.setPlaceholderText(placeholder)
@@ -2162,18 +2162,18 @@ class ParameterEditDialog(QDialog):
         setattr(self, edit_name, edit)
         parent_layout.addWidget(edit)
         
-        # 添加间距
+        
         parent_layout.addSpacing(6)
     
     def create_textarea_field(self, parent_layout, title, edit_name, value, placeholder):
-        """创建简洁的文本区域字段"""
-        # 标题
+        
+        
         label = QLabel(title)
         label.setFont(QFont(get_system_font(), 10, QFont.Bold))
         label.setStyleSheet("color: #495057; font-weight: bold; margin-bottom: 4px;")
         parent_layout.addWidget(label)
         
-        # 文本编辑器
+        
         edit = QTextEdit()
         edit.setPlainText(value)
         edit.setPlaceholderText(placeholder)
@@ -2203,7 +2203,7 @@ class ParameterEditDialog(QDialog):
         setattr(self, edit_name, edit)
         parent_layout.addWidget(edit)
         
-        # 添加间距
+        
         parent_layout.addSpacing(6)
 
 
@@ -2211,7 +2211,7 @@ class ParameterEditDialog(QDialog):
 
     
     def save_and_close(self):
-        # 验证输入
+        
         if not self.name_edit.text().strip():
             self.show_warning("验证失败", "参数名称不能为空")
             return
@@ -2220,7 +2220,7 @@ class ParameterEditDialog(QDialog):
             self.show_warning("验证失败", "显示名称不能为空")
             return
         
-        # 更新参数信息
+        
         self.param_info['param_name'] = self.name_edit.text().strip()
         self.param_info['display_name'] = self.display_edit.text().strip()
         self.param_info['description'] = self.desc_edit.toPlainText().strip()
@@ -2230,7 +2230,7 @@ class ParameterEditDialog(QDialog):
         self.accept()
     
     def show_warning(self, title, message):
-        """显示警告对话框"""
+        
         dialog = QDialog(self)
         dialog.setWindowTitle(title)
         dialog.setFixedSize(400, 200)
@@ -2333,7 +2333,7 @@ class ParameterWidget(QWidget):
             required_text = "<br/><span style='color: #dc3545; font-size: 9pt; font-weight: bold;'>* 此参数为必填项</span>"
             tooltip_text += required_text
         
-        # 添加拖拽提示
+        
         drag_tip = "<br/><span style='color: #17a2b8; font-size: 8pt;'>💡 提示：拖拽此参数可以重新排序</span>"
         tooltip_text += drag_tip
         
@@ -2344,7 +2344,7 @@ class ParameterWidget(QWidget):
         layout.setSpacing(2)  
         layout.setContentsMargins(2, 2, 2, 2)  
         
-        # 添加拖拽图标
+        
         drag_icon = QLabel("")
         drag_icon.setFixedSize(0, 0)
         drag_icon.setAlignment(Qt.AlignCenter)
@@ -2476,7 +2476,7 @@ class ParameterWidget(QWidget):
             self.setMinimumHeight(32)  
             self.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Minimum)  
             
-        # 添加拖拽时的视觉样式
+        
         self.setStyleSheet("""
             ParameterWidget {
                 border-radius: 4px;
@@ -2491,12 +2491,12 @@ class ParameterWidget(QWidget):
         self.setLayout(layout)
     
     def setup_context_menu(self):
-        """设置右键菜单"""
+        
         self.setContextMenuPolicy(Qt.ContextMenuPolicy.CustomContextMenu)
         self.customContextMenuRequested.connect(self.show_context_menu)
     
     def show_context_menu(self, position):
-        """显示右键菜单"""
+        
         menu = QMenu(self)
         menu.setStyleSheet(f"""
             QMenu {{
@@ -2540,7 +2540,7 @@ class ParameterWidget(QWidget):
             }}
         """)
         
-        # 获取当前参数所在的选项卡和操作页面
+        
         tool_page = self.get_tool_operation_page()
         if not tool_page:
             return
@@ -2551,36 +2551,36 @@ class ParameterWidget(QWidget):
         
         current_tab_name = tool_page.param_tabs.tabText(tool_page.param_tabs.currentIndex())
         
-        # 编辑参数信息
+        
         edit_action = menu.addAction("✏️ 编辑参数信息")
         edit_action.triggered.connect(self.edit_parameter)
         
         menu.addSeparator()
         
-        # 必填项切换
+        
         required_text = "❌ 取消必填" if self.param_info.get('required', False) else "⭐ 设为必填"
         required_action = menu.addAction(required_text)
         required_action.triggered.connect(self.toggle_required)
         
         menu.addSeparator()
         
-        # 根据当前选项卡显示不同的菜单选项
+        
         if current_tab_name == "常用参数":
-            # 在常用参数中，可以直接移除（删除）
+            
             remove_action = menu.addAction("➖ 从常用参数中移除")
             remove_action.triggered.connect(self.remove_from_common)
         elif current_tab_name == "全部参数":
-            # 在全部参数中，可以添加到常用参数
+            
             add_action = menu.addAction("➕ 添加到常用参数")
             add_action.triggered.connect(self.copy_to_common)
         
 
         
-        # 显示菜单
+        
         menu.exec(self.mapToGlobal(position))
     
     def get_tool_operation_page(self):
-        """获取所属的工具操作页面"""
+        
         parent = self.parent()
         while parent:
             if isinstance(parent, ToolOperationPage):
@@ -2589,50 +2589,50 @@ class ParameterWidget(QWidget):
         return None
     
     def edit_parameter(self):
-        """编辑参数信息"""
+        
         dialog = ParameterEditDialog(self.param_info, self)
         if dialog.exec() == QDialog.Accepted:
-            # 获取编辑后的参数信息
+            
             new_param_info = dialog.get_param_info()
             old_param_name = self.param_info['param_name']
             
-            # 更新当前参数信息
+            
             self.param_info.update(new_param_info)
             
-            # 同步更新配置数据
+            
             tool_page = self.get_tool_operation_page()
             if tool_page:
                 tool_page.update_parameter_in_config(old_param_name, new_param_info)
-                # 保存到配置文件
+                
                 tool_page.save_config_to_file()
-                # 重新加载配置以刷新界面
+                
                 tool_page.reload_config()
     
     def toggle_required(self):
-        """切换必填状态"""
+        
         current_required = self.param_info.get('required', False)
         new_required = not current_required
         
-        # 更新参数信息
+        
         self.param_info['required'] = new_required
         
-        # 更新UI
+        
         self.update_ui_from_param_info()
         
-        # 保存配置并同步
+        
         tool_page = self.get_tool_operation_page()
         if tool_page:
             tool_page.save_config_to_file()
-            # 同步必填状态到所有选项卡
+            
             tool_page.sync_required_status(self.param_info['param_name'], new_required)
     
     def move_parameter(self, from_tab, to_tab):
-        """移动参数到其他选项卡"""
+        
         tool_page = self.get_tool_operation_page()
         if not tool_page:
             return
         
-        # 使用美化的确认对话框
+        
         if tool_page.show_custom_question(
             "移动参数确认", 
             f"确定要将参数 '{self.param_info['display_name']}' 从{from_tab}移动到{to_tab}吗？"
@@ -2640,12 +2640,12 @@ class ParameterWidget(QWidget):
             tool_page.move_parameter_between_tabs(self.param_info, from_tab, to_tab)
     
     def remove_from_common(self):
-        """从常用参数中移除"""
+        
         tool_page = self.get_tool_operation_page()
         if not tool_page:
             return
         
-        # 使用美化的确认对话框
+        
         if tool_page.show_custom_question(
             "移除参数确认", 
             f"确定要将参数 '{self.param_info['display_name']}' 从常用参数中移除吗？\n\n注意：移除后该参数仍可在全部参数中找到。"
@@ -2653,12 +2653,12 @@ class ParameterWidget(QWidget):
             tool_page.remove_parameter_from_common(self.param_info)
     
     def copy_to_common(self):
-        """复制参数到常用参数"""
+        
         tool_page = self.get_tool_operation_page()
         if not tool_page:
             return
         
-        # 使用美化的确认对话框
+        
         if tool_page.show_custom_question(
             "添加参数确认", 
             f"确定要将参数 '{self.param_info['display_name']}' 添加到常用参数吗？"
@@ -2666,18 +2666,18 @@ class ParameterWidget(QWidget):
             tool_page.copy_parameter_to_common(self.param_info)
     
     def update_ui_from_param_info(self):
-        """根据参数信息更新UI"""
+        
         param_type = self.param_info['type']
         is_required = self.param_info.get('required', False)
         
-        if param_type == '1':  # 勾选项
+        if param_type == '1':  
             self.control.setText(self.param_info['display_name'])
-            # 更新必填状态和样式
+            
             self.control.is_required = is_required
             self.control.parent_widget = self
             self.control.update_style()
-        elif param_type == '2':  # 输入项
-            # 更新标签文本
+        elif param_type == '2':  
+            
             for i in range(self.layout().count()):
                 item = self.layout().itemAt(i)
                 if item and item.widget() and isinstance(item.widget(), QLabel):
@@ -2685,7 +2685,7 @@ class ParameterWidget(QWidget):
                     label_text = self.param_info['display_name'] + ":"
                     label.setText(label_text)
                     
-                    # 更新标签样式 - 根据是否必填设置不同样式
+                    
                     if is_required:
                         label_style = f"""
                             QLabel {{
@@ -2714,22 +2714,22 @@ class ParameterWidget(QWidget):
                     label.setStyleSheet(label_style)
                     break
             
-            # 更新输入框占位符
+            
             placeholder_text = "输入值"
             if is_required:
                 placeholder_text = "必填 - 请输入值"
             self.control.setPlaceholderText(placeholder_text)
             
-            # 更新必填样式
+            
             self.update_required_style()
         
-        # 更新工具提示
+        
         tooltip = self.create_tooltip()
         if tooltip:
             self.control.setToolTip(tooltip)
     
     def copy_parameter_info(self):
-        """复制参数信息到剪贴板"""
+        
         param_info_text = f"""参数名称: {self.param_info['param_name']}
 显示名称: {self.param_info['display_name']}
 参数描述: {self.param_info.get('description', '无描述')}
@@ -2740,7 +2740,7 @@ class ParameterWidget(QWidget):
         clipboard = QApplication.clipboard()
         clipboard.setText(param_info_text)
         
-        # 显示复制成功提示
+        
         QToolTip.showText(
             self.mapToGlobal(self.rect().center()), 
             "参数信息已复制到剪贴板", 
@@ -2750,19 +2750,19 @@ class ParameterWidget(QWidget):
         )
     
     def reset_parameter_value(self):
-        """重置参数值"""
+        
         param_type = self.param_info['type']
         
-        if param_type == '1':  # 勾选项
+        if param_type == '1':  
             self.control.setChecked(False)
-        elif param_type == '2':  # 输入项
+        elif param_type == '2':  
             self.control.clear()
         
-        # 更新必填样式
+        
         if self.param_info.get('required', False):
             self.update_required_style()
         
-        # 显示重置成功提示
+        
         QToolTip.showText(
             self.mapToGlobal(self.rect().center()), 
             "参数值已重置", 
@@ -2772,12 +2772,12 @@ class ParameterWidget(QWidget):
         )
     
     def get_display_value(self):
-        """获取参数的显示值"""
+        
         param_type = self.param_info['type']
         
-        if param_type == '1':  # 勾选项
+        if param_type == '1':  
             return "已选中" if self.control.isChecked() else "未选中"
-        elif param_type == '2':  # 输入项
+        elif param_type == '2':  
             value = self.control.text().strip()
             return value if value else "未设置"
         
@@ -2830,14 +2830,14 @@ class ParameterWidget(QWidget):
         param_type = self.param_info['type']
         
         if param_type == '1':  
-            # 勾选项通过ClickableLabel的update_style处理
+            
             if hasattr(self.control, 'update_style'):
                 self.control.update_style()
         elif param_type == '2':  
-            # 输入项根据必填状态和填写状态设置不同样式
+            
             if is_required:
                 if is_filled:
-                    # 必填且已填写 - 绿色成功样式
+                    
                     normal_style = f"""
                         QLineEdit {{
                             background-color: #ffffff;
@@ -2859,7 +2859,7 @@ class ParameterWidget(QWidget):
                     """
                     self.control.setStyleSheet(normal_style)
                 else:
-                    # 必填但未填写 - 红色错误样式
+                    
                     error_style = f"""
                         QLineEdit {{
                             background-color: #fff5f5;
@@ -2881,7 +2881,7 @@ class ParameterWidget(QWidget):
                     """
                     self.control.setStyleSheet(error_style)
             else:
-                # 非必填项 - 普通样式
+                
                 normal_style = f"""
                     QLineEdit {{
                         background-color: #ffffff;
@@ -2904,17 +2904,17 @@ class ParameterWidget(QWidget):
                 self.control.setStyleSheet(normal_style)
     
     def setup_drag_drop(self):
-        """设置拖拽功能"""
-        self.setAcceptDrops(False)  # 参数控件本身不接受拖拽，由父容器处理
+        
+        self.setAcceptDrops(False)  
         
     def mousePressEvent(self, event):
-        """鼠标按下事件，记录拖拽起始位置"""
+        
         if event.button() == Qt.LeftButton:
             self.drag_start_position = event.position().toPoint()
         super().mousePressEvent(event)
     
     def mouseMoveEvent(self, event):
-        """鼠标移动事件，开始拖拽操作"""
+        
         if not (event.buttons() & Qt.LeftButton):
             return
         
@@ -2922,15 +2922,15 @@ class ParameterWidget(QWidget):
             QApplication.startDragDistance()):
             return
         
-        # 开始拖拽操作
+        
         self.start_drag()
     
     def start_drag(self):
-        """开始拖拽操作"""
+        
         drag = QDrag(self)
         mime_data = QMimeData()
         
-        # 设置拖拽数据，包含参数名、类型和当前区域信息
+        
         drag_data = {
             'param_name': self.param_info['param_name'],
             'param_type': self.param_info['type'],
@@ -2942,41 +2942,41 @@ class ParameterWidget(QWidget):
         mime_data.setText(f"parameter_widget_data:{json.dumps(drag_data)}")
         drag.setMimeData(mime_data)
         
-        # 使用简单的拖拽图标，避免复杂的QPainter操作
+        
         try:
-            # 尝试获取控件截图
+            
             pixmap = self.grab()
             if not pixmap.isNull() and pixmap.width() > 0 and pixmap.height() > 0:
                 drag.setPixmap(pixmap)
             else:
-                # 使用默认拖拽图标
+                
                 drag.setPixmap(self.create_simple_drag_icon())
         except Exception:
-            # 如果出现任何错误，使用简单图标
+            
             drag.setPixmap(self.create_simple_drag_icon())
         
-        # 设置拖拽热点
+        
         if hasattr(self, 'drag_start_position'):
             drag.setHotSpot(self.drag_start_position)
         else:
             drag.setHotSpot(QPoint(10, 10))
         
-        # 执行拖拽操作
+        
         result = drag.exec(Qt.MoveAction)
         
         if result == Qt.MoveAction:
-            # 拖拽成功
+            
             pass
     
     def create_simple_drag_icon(self):
-        """创建简单的拖拽图标，避免复杂的绘制操作"""
-        # 创建一个简单的单色图标
+        
+        
         pixmap = QPixmap(80, 24)
-        pixmap.fill(QColor(74, 144, 226, 200))  # 半透明蓝色背景
+        pixmap.fill(QColor(74, 144, 226, 200))  
         return pixmap
     
     def get_current_section_title(self):
-        """获取当前参数所在区域的标题"""
+        
         parent = self.parent()
         while parent:
             if isinstance(parent, ParameterSection):
@@ -3029,11 +3029,11 @@ class ParameterSection(QWidget):
             group_layout.setContentsMargins(8, 8, 8, 8)
             group_layout.setSpacing(4)
             
-            # 添加搜索栏
+            
             search_container = self.create_search_bar()
             group_layout.addWidget(search_container)
             
-            # 创建滚动区域
+            
             scroll_area = QScrollArea()
             scroll_area.setHorizontalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
             scroll_area.setVerticalScrollBarPolicy(Qt.ScrollBarAsNeeded)
@@ -3092,25 +3092,25 @@ class ParameterSection(QWidget):
         self.setLayout(layout)
     
     def create_search_bar(self):
-        """创建搜索栏"""
+        
         search_container = QWidget()
         search_layout = QHBoxLayout()
         search_layout.setContentsMargins(4, 4, 4, 8)
         search_layout.setSpacing(8)
         
-        # 搜索图标标签
+        
         search_icon = QLabel("🔍")
         search_icon.setFont(QFont(get_system_font(), 10))
         search_icon.setFixedSize(20, 24)
         search_icon.setAlignment(Qt.AlignCenter)
         
-        # 搜索输入框
+        
         self.search_input = QLineEdit()
         self.search_input.setPlaceholderText("搜索参数（支持参数名、显示名、介绍）...")
         self.search_input.setFont(QFont(get_system_font(), 9))
         self.search_input.textChanged.connect(self.on_search_text_changed)
         
-        # 设置搜索框样式
+        
         self.search_input.setStyleSheet("""
             QLineEdit {
                 border: 1px solid #ddd;
@@ -3131,14 +3131,14 @@ class ParameterSection(QWidget):
             }
         """)
         
-        # 清除按钮
+        
         self.clear_search_btn = QPushButton("✕")
         self.clear_search_btn.setFont(QFont(get_system_font(), 8))
         self.clear_search_btn.setFixedSize(24, 24)
         self.clear_search_btn.clicked.connect(self.clear_search)
-        self.clear_search_btn.setVisible(False)  # 初始隐藏
+        self.clear_search_btn.setVisible(False)  
         
-        # 设置清除按钮样式
+        
         self.clear_search_btn.setStyleSheet("""
             QPushButton {
                 border: none;
@@ -3156,13 +3156,13 @@ class ParameterSection(QWidget):
             }
         """)
         
-        # 搜索结果计数标签
+        
         self.search_result_label = QLabel()
         self.search_result_label.setFont(QFont(get_system_font(), 8))
         self.search_result_label.setStyleSheet("color: #666; padding: 4px;")
         self.search_result_label.setVisible(False)
         
-        # 布局
+        
         search_layout.addWidget(search_icon)
         search_layout.addWidget(self.search_input, 1)
         search_layout.addWidget(self.clear_search_btn)
@@ -3172,7 +3172,7 @@ class ParameterSection(QWidget):
         return search_container
     
     def on_search_text_changed(self, text):
-        """搜索文本变化时的处理"""
+        
         self.clear_search_btn.setVisible(bool(text))
         
         if text.strip():
@@ -3181,17 +3181,17 @@ class ParameterSection(QWidget):
             self.show_all_parameters()
     
     def clear_search(self):
-        """清除搜索"""
+        
         self.search_input.clear()
         self.show_all_parameters()
     
     def filter_parameters(self, search_text):
-        """根据搜索文本过滤参数"""
+        
         search_text_lower = search_text.lower()
         visible_count = 0
         
         for param_widget in self.param_widgets:
-            # 检查是否匹配搜索条件
+            
             if self.matches_search(param_widget.param_info, search_text_lower):
                 param_widget.setVisible(True)
                 self.highlight_search_match(param_widget, search_text_lower)
@@ -3200,7 +3200,7 @@ class ParameterSection(QWidget):
                 param_widget.setVisible(False)
                 self.clear_highlight(param_widget)
         
-        # 更新搜索结果计数
+        
         total_count = len(self.param_widgets)
         if visible_count == 0:
             self.search_result_label.setText("❌ 未找到匹配的参数")
@@ -3212,7 +3212,7 @@ class ParameterSection(QWidget):
         self.search_result_label.setVisible(True)
     
     def show_all_parameters(self):
-        """显示所有参数"""
+        
         for param_widget in self.param_widgets:
             param_widget.setVisible(True)
             self.clear_highlight(param_widget)
@@ -3220,32 +3220,32 @@ class ParameterSection(QWidget):
         self.search_result_label.setVisible(False)
     
     def matches_search(self, param_info, search_text):
-        """检查参数是否匹配搜索条件"""
-        # 检查原参数名
+        
+        
         if search_text in param_info.get('param_name', '').lower():
             return True
         
-        # 检查显示名称
+        
         if search_text in param_info.get('display_name', '').lower():
             return True
         
-        # 检查参数介绍/描述
+        
         if search_text in param_info.get('description', '').lower():
             return True
         
-        # 检查工具提示内容
+        
         if search_text in param_info.get('help', '').lower():
             return True
         
-        # 检查默认值
+        
         if search_text in str(param_info.get('default', '')).lower():
             return True
         
         return False
     
     def highlight_search_match(self, param_widget, search_text):
-        """高亮显示搜索匹配的参数"""
-        # 添加高亮样式
+        
+        
         current_style = param_widget.styleSheet()
         highlight_style = """
             ParameterWidget {
@@ -3257,8 +3257,8 @@ class ParameterSection(QWidget):
         param_widget.setStyleSheet(current_style + highlight_style)
     
     def clear_highlight(self, param_widget):
-        """清除参数的高亮样式"""
-        # 恢复原始样式
+        
+        
         param_widget.setStyleSheet("""
             ParameterWidget {
                 border-radius: 4px;
@@ -3291,20 +3291,20 @@ class ParameterSection(QWidget):
     def update_all_required_styles(self):
         
         for widget in self.param_widgets:
-            # 更新所有参数的样式，不只是必填参数
+            
             widget.update_required_style()
     
     def setup_context_menu(self):
-        """设置区域右键菜单"""
+        
         self.setContextMenuPolicy(Qt.ContextMenuPolicy.CustomContextMenu)
         self.customContextMenuRequested.connect(self.show_section_context_menu)
     
     def show_section_context_menu(self, position):
-        """显示区域右键菜单"""
-        # 检查是否点击在参数控件上
+        
+        
         child_widget = self.childAt(position)
         if child_widget and self.is_parameter_widget(child_widget):
-            return  # 如果点击在参数控件上，不显示区域菜单
+            return  
         
         menu = QMenu(self)
         menu.setStyleSheet(f"""
@@ -3349,18 +3349,18 @@ class ParameterSection(QWidget):
             }}
         """)
         
-        # 添加新参数菜单项
+        
         add_checkbox_action = menu.addAction("➕ 添加勾选项参数")
         add_checkbox_action.triggered.connect(lambda: self.add_new_parameter('1'))
         
         add_input_action = menu.addAction("📝 添加输入项参数")
         add_input_action.triggered.connect(lambda: self.add_new_parameter('2'))
         
-        # 显示菜单
+        
         menu.exec(self.mapToGlobal(position))
     
     def is_parameter_widget(self, widget):
-        """检查是否是参数控件"""
+        
         parent = widget.parent()
         while parent:
             if isinstance(parent, ParameterWidget):
@@ -3369,8 +3369,8 @@ class ParameterSection(QWidget):
         return False
     
     def add_new_parameter(self, param_type):
-        """添加新参数"""
-        # 创建默认参数信息
+        
+        
         param_count = len(self.param_widgets) + 1
         default_param = {
             'param_name': f'--new-param-{param_count}',
@@ -3380,18 +3380,18 @@ class ParameterSection(QWidget):
             'required': False
         }
         
-        # 打开编辑对话框
+        
         dialog = ParameterEditDialog(default_param, self)
         if dialog.exec() == QDialog.Accepted:
             new_param_info = dialog.get_param_info()
             
-            # 获取工具操作页面
+            
             tool_page = self.get_tool_operation_page()
             if tool_page:
                 tool_page.add_parameter_to_section(new_param_info, self.title)
     
     def get_tool_operation_page(self):
-        """获取所属的工具操作页面"""
+        
         parent = self.parent()
         while parent:
             if isinstance(parent, ToolOperationPage):
@@ -3400,11 +3400,11 @@ class ParameterSection(QWidget):
         return None
     
     def setup_drag_drop(self):
-        """设置拖拽接收功能"""
+        
         self.setAcceptDrops(True)
     
     def dragEnterEvent(self, event):
-        """拖拽进入事件"""
+        
         if event.mimeData().hasText():
             text = event.mimeData().text()
             if text.startswith("parameter_widget_data:"):
@@ -3415,7 +3415,7 @@ class ParameterSection(QWidget):
             event.ignore()
     
     def dragMoveEvent(self, event):
-        """拖拽移动事件"""
+        
         if event.mimeData().hasText():
             text = event.mimeData().text()
             if text.startswith("parameter_widget_data:"):
@@ -3425,14 +3425,14 @@ class ParameterSection(QWidget):
                     drag_data = json.loads(drag_data_str)
                     source_section = drag_data['source_section']
                     
-                    # 只在首次进入时更新样式，避免频繁更新
+                    
                     if not hasattr(self, '_drag_style_applied'):
-                        # 检查是否为跨区域拖拽
+                        
                         if source_section != self.title:
-                            # 跨区域拖拽，显示转换提示
+                            
                             self.show_conversion_hint(True)
                         else:
-                            # 同区域拖拽，显示普通提示
+                            
                             self.show_conversion_hint(False)
                         
                         self._drag_style_applied = True
@@ -3446,14 +3446,14 @@ class ParameterSection(QWidget):
             event.ignore()
     
     def show_conversion_hint(self, is_conversion):
-        """显示转换提示"""
+        
         try:
             if is_conversion:
-                # 跨区域拖拽，显示类型转换提示
+                
                 target_type = "勾选项" if self.title == "勾选项区" else "输入项"
                 hint_text = f"🔄 将转换为{target_type}"
                 
-                # 设置特殊的拖拽样式
+                
                 self.setStyleSheet("""
                     QGroupBox {
                         border: 2px dashed #17a2b8;
@@ -3476,7 +3476,7 @@ class ParameterSection(QWidget):
                     }
                 """)
             else:
-                # 同区域拖拽，显示普通排序提示
+                
                 self.setStyleSheet("""
                     QGroupBox {
                         border: 2px dashed #28a745;
@@ -3502,18 +3502,18 @@ class ParameterSection(QWidget):
             pass
     
     def dragLeaveEvent(self, event):
-        """拖拽离开事件，恢复原始样式"""
+        
         try:
             self.restore_original_style()
-            # 重置样式状态标记
+            
             if hasattr(self, '_drag_style_applied'):
                 delattr(self, '_drag_style_applied')
         except Exception:
             pass
     
     def restore_original_style(self):
-        """恢复原始样式"""
-        # 恢复原始的GroupBox样式
+        
+        
         self.setStyleSheet("""
             QGroupBox {
                 border: 1px solid #c0c0c0;
@@ -3538,7 +3538,7 @@ class ParameterSection(QWidget):
         """)
      
     def dropEvent(self, event):
-        """拖拽放置事件"""
+        
         if event.mimeData().hasText():
             text = event.mimeData().text()
             if text.startswith("parameter_widget_data:"):
@@ -3552,20 +3552,20 @@ class ParameterSection(QWidget):
                     source_section = drag_data['source_section']
                     param_info = drag_data['param_info']
                     
-                    # 获取放置位置
+                    
                     drop_position = event.position().toPoint()
                     
-                    # 判断是否为跨区域拖拽
+                    
                     if source_section != self.title:
-                        # 跨区域拖拽，需要转换参数类型
+                        
                         self.handle_cross_section_drop(param_info, source_section, drop_position)
                     else:
-                        # 同区域内排序
+                        
                         self.reorder_parameters(param_name, drop_position)
                     
-                    # 恢复原始样式
+                    
                     self.restore_original_style()
-                    # 重置样式状态标记
+                    
                     if hasattr(self, '_drag_style_applied'):
                         delattr(self, '_drag_style_applied')
                     
@@ -3581,9 +3581,9 @@ class ParameterSection(QWidget):
             event.ignore()
     
     def reorder_parameters(self, dragged_param_name, drop_position):
-        """重新排序参数"""
+        
         try:
-            # 找到被拖拽的参数在当前列表中的索引
+            
             dragged_index = -1
             dragged_param = None
             for i, param_widget in enumerate(self.param_widgets):
@@ -3595,36 +3595,36 @@ class ParameterSection(QWidget):
             if dragged_index == -1 or dragged_param is None:
                 return
             
-            # 计算目标位置索引
+            
             target_index = self.calculate_drop_index(drop_position)
             
-            # 如果目标位置和原位置相同，不需要重新排序
+            
             if target_index == dragged_index:
                 return
             
-            # 调整目标索引（如果向后拖拽，需要减1因为移除了原元素）
+            
             if target_index > dragged_index:
                 target_index -= 1
             
-            # 重新排序参数列表
+            
             self.param_widgets.pop(dragged_index)
             self.param_widgets.insert(target_index, dragged_param)
             
-            # 重新排序配置数据
+            
             self.params.pop(dragged_index)
             self.params.insert(target_index, dragged_param.param_info)
             
-            # 更新布局
+            
             self.update_layout()
             
-            # 保存配置并同步到全局
+            
             tool_page = self.get_tool_operation_page()
             if tool_page:
-                # 更新全局配置数据
+                
                 tool_page.sync_parameter_order(self.title, self.params)
-                # 保存到文件
+                
                 tool_page.save_config_to_file()
-                # 在系统日志中记录
+                
                 tool_page.system_log_tab.append_system_log(
                     f"参数 '{dragged_param.param_info['display_name']}' 已重新排序", 
                     "success"
@@ -3636,12 +3636,12 @@ class ParameterSection(QWidget):
                 tool_page.system_log_tab.append_system_log(f"参数排序失败: {e}", "error")
     
     def calculate_drop_index(self, drop_position):
-        """计算放置位置对应的索引"""
-        # 根据当前布局计算最适合的插入位置
+        
+        
         if not self.param_widgets:
             return 0
         
-        # 获取布局信息
+        
         if self.title == "勾选项区":
             cols_per_row = 3
         elif self.title == "输入框区":
@@ -3649,7 +3649,7 @@ class ParameterSection(QWidget):
         else:
             cols_per_row = 2
         
-        # 遍历所有参数控件，找到最接近的位置
+        
         min_distance = float('inf')
         target_index = len(self.param_widgets)
         
@@ -3662,7 +3662,7 @@ class ParameterSection(QWidget):
             
             if distance < min_distance:
                 min_distance = distance
-                # 判断是插入到这个控件之前还是之后
+                
                 if drop_position.y() < widget_local_center.y() or \
                    (drop_position.y() == widget_local_center.y() and drop_position.x() < widget_local_center.x()):
                     target_index = i
@@ -3672,11 +3672,11 @@ class ParameterSection(QWidget):
         return min(target_index, len(self.param_widgets))
     
     def update_layout(self):
-        """更新布局，重新排列参数控件"""
-        # 清空当前布局
+        
+        
         layout = self.layout()
         if layout:
-            # 找到 QGroupBox
+            
             for i in range(layout.count()):
                 item = layout.itemAt(i)
                 if item and item.widget():
@@ -3684,32 +3684,32 @@ class ParameterSection(QWidget):
                     if isinstance(widget, QGroupBox):
                         group_layout = widget.layout()
                         if group_layout:
-                            # 找到 QScrollArea
+                            
                             for j in range(group_layout.count()):
                                 scroll_item = group_layout.itemAt(j)
                                 if scroll_item and scroll_item.widget():
                                     scroll_widget = scroll_item.widget()
                                     if isinstance(scroll_widget, QScrollArea):
-                                        # 获取滚动区域内的布局
+                                        
                                         scroll_content = scroll_widget.widget()
                                         if scroll_content:
                                             content_layout = scroll_content.layout()
                                             if content_layout and isinstance(content_layout, QGridLayout):
-                                                # 清空网格布局
+                                                
                                                 while content_layout.count():
                                                     child = content_layout.takeAt(0)
                                                     if child.widget():
                                                         child.widget().setParent(None)
                                                 
-                                                # 重新添加参数控件
+                                                
                                                 self.rebuild_grid_layout(content_layout)
                                                 return
         
-        # 如果没有找到合适的布局，重新构建整个UI
+        
         self.rebuild_section_ui()
     
     def rebuild_grid_layout(self, grid_layout):
-        """重新构建网格布局"""
+        
         if self.title == "勾选项区":
             cols_per_row = 3
         elif self.title == "输入框区":
@@ -3723,7 +3723,7 @@ class ParameterSection(QWidget):
         for param_widget in self.param_widgets:
             param_type = param_widget.param_info['type']
             
-            if param_type == '2' and cols_per_row > 1:  # 输入项占两列
+            if param_type == '2' and cols_per_row > 1:  
                 grid_layout.addWidget(param_widget, row, col, 1, 2)
                 col += 2
             else:
@@ -3734,17 +3734,17 @@ class ParameterSection(QWidget):
                 col = 0
                 row += 1
         
-        # 设置列拉伸
+        
         for i in range(cols_per_row):
             grid_layout.setColumnStretch(i, 1)
         
-        # 设置行拉伸
+        
         for r in range(row + 1):
             grid_layout.setRowStretch(r, 0)
     
     def rebuild_section_ui(self):
-        """重新构建整个区域UI"""
-        # 清空当前布局
+        
+        
         layout = self.layout()
         if layout:
             while layout.count():
@@ -3752,29 +3752,29 @@ class ParameterSection(QWidget):
                 if child.widget():
                     child.widget().deleteLater()
         
-        # 重新构建UI
+        
         self.setup_ui()
     
     def handle_cross_section_drop(self, param_info, source_section, drop_position):
-        """处理跨区域拖拽"""
+        
         try:
             tool_page = self.get_tool_operation_page()
             if not tool_page:
                 return
             
-            # 转换参数类型
+            
             new_param_info = self.convert_parameter_type(param_info)
             
-            # 计算目标位置索引
+            
             target_index = self.calculate_drop_index(drop_position)
             
-            # 执行优化的跨区域移动
+            
             self.optimized_cross_section_move(param_info, new_param_info, source_section, target_index)
             
-            # 仅保存配置，不重新加载界面
+            
             tool_page.save_config_to_file()
             
-            # 记录日志
+            
             type_text = "勾选项" if new_param_info['type'] == '1' else "输入项"
             tool_page.system_log_tab.append_system_log(
                 f"参数 '{param_info['display_name']}' 已从 {source_section} 移动到 {self.title} 并转换为 {type_text}", 
@@ -3787,21 +3787,21 @@ class ParameterSection(QWidget):
                 tool_page.system_log_tab.append_system_log(f"跨区域拖拽失败: {e}", "error")
     
     def optimized_cross_section_move(self, old_param_info, new_param_info, source_section, target_index):
-        """优化的跨区域移动，避免界面重载"""
+        
         try:
             tool_page = self.get_tool_operation_page()
             if not tool_page:
                 return
             
-            # 1. 从源区域的UI中移除参数控件
+            
             source_section_widget = self.find_source_section_widget(source_section)
             if source_section_widget:
                 source_section_widget.remove_parameter_widget_direct(old_param_info['param_name'])
             
-            # 2. 直接在当前区域添加转换后的参数控件
+            
             self.add_converted_parameter_direct(new_param_info, target_index)
             
-            # 3. 更新配置数据
+            
             self.update_config_data_direct(old_param_info, new_param_info, source_section)
             
         except Exception as e:
@@ -3810,16 +3810,16 @@ class ParameterSection(QWidget):
                 tool_page.system_log_tab.append_system_log(f"优化跨区域移动失败: {e}", "error")
     
     def find_source_section_widget(self, source_section):
-        """查找源区域的widget"""
+        
         try:
             tool_page = self.get_tool_operation_page()
             if not tool_page:
                 return None
             
-            # 获取当前选项卡
+            
             current_tab_widget = tool_page.param_tabs.currentWidget()
             if current_tab_widget:
-                # 遍历选项卡中的所有ParameterSection
+                
                 for child in current_tab_widget.findChildren(ParameterSection):
                     if child.title == source_section:
                         return child
@@ -3829,9 +3829,9 @@ class ParameterSection(QWidget):
             return None
     
     def remove_parameter_widget_direct(self, param_name):
-        """直接从UI中移除参数控件，不重建整个界面"""
+        
         try:
-            # 找到要移除的参数控件
+            
             widget_to_remove = None
             for i, param_widget in enumerate(self.param_widgets):
                 if param_widget.param_info['param_name'] == param_name:
@@ -3841,11 +3841,11 @@ class ParameterSection(QWidget):
                     break
             
             if widget_to_remove:
-                # 从布局中移除控件
+                
                 widget_to_remove.setParent(None)
                 widget_to_remove.deleteLater()
                 
-                # 快速更新布局
+                
                 self.update_layout_fast()
             
         except Exception as e:
@@ -3854,12 +3854,12 @@ class ParameterSection(QWidget):
                 tool_page.system_log_tab.append_system_log(f"移除参数控件失败: {e}", "error")
     
     def add_converted_parameter_direct(self, param_info, target_index):
-        """直接添加转换后的参数控件，避免重建界面"""
+        
         try:
-            # 创建新的参数控件
+            
             param_widget = ParameterWidget(param_info)
             
-            # 插入到参数列表
+            
             if target_index >= len(self.params):
                 self.params.append(param_info)
                 self.param_widgets.append(param_widget)
@@ -3867,7 +3867,7 @@ class ParameterSection(QWidget):
                 self.params.insert(target_index, param_info)
                 self.param_widgets.insert(target_index, param_widget)
             
-            # 快速更新布局
+            
             self.update_layout_fast()
             
         except Exception as e:
@@ -3876,7 +3876,7 @@ class ParameterSection(QWidget):
                 tool_page.system_log_tab.append_system_log(f"添加转换参数控件失败: {e}", "error")
     
     def update_config_data_direct(self, old_param_info, new_param_info, source_section):
-        """直接更新配置数据，避免重新解析"""
+        
         try:
             tool_page = self.get_tool_operation_page()
             if not tool_page:
@@ -3884,7 +3884,7 @@ class ParameterSection(QWidget):
             
             current_tab_name = tool_page.param_tabs.tabText(tool_page.param_tabs.currentIndex())
             
-            # 从源区域的配置中移除
+            
             if (current_tab_name in tool_page.config_data and 
                 source_section in tool_page.config_data[current_tab_name]):
                 source_params = tool_page.config_data[current_tab_name][source_section]
@@ -3893,13 +3893,13 @@ class ParameterSection(QWidget):
                         source_params.pop(i)
                         break
             
-            # 更新当前区域的配置
+            
             if current_tab_name in tool_page.config_data:
                 if self.title not in tool_page.config_data[current_tab_name]:
                     tool_page.config_data[current_tab_name][self.title] = []
                 tool_page.config_data[current_tab_name][self.title] = self.params.copy()
             
-            # 同步到其他选项卡
+            
             self.sync_config_to_other_tabs(old_param_info, new_param_info, source_section, current_tab_name)
             
         except Exception as e:
@@ -3908,7 +3908,7 @@ class ParameterSection(QWidget):
                 tool_page.system_log_tab.append_system_log(f"更新配置数据失败: {e}", "error")
     
     def sync_config_to_other_tabs(self, old_param_info, new_param_info, source_section, current_tab):
-        """同步配置到其他选项卡"""
+        
         try:
             tool_page = self.get_tool_operation_page()
             if not tool_page:
@@ -3916,7 +3916,7 @@ class ParameterSection(QWidget):
             
             for tab_name in ['常用参数', '全部参数']:
                 if tab_name != current_tab and tab_name in tool_page.config_data:
-                    # 从源区域移除
+                    
                     if source_section in tool_page.config_data[tab_name]:
                         source_params = tool_page.config_data[tab_name][source_section]
                         for i, param in enumerate(source_params):
@@ -3924,11 +3924,11 @@ class ParameterSection(QWidget):
                                 source_params.pop(i)
                                 break
                     
-                    # 添加到目标区域
+                    
                     if self.title not in tool_page.config_data[tab_name]:
                         tool_page.config_data[tab_name][self.title] = []
                     
-                    # 检查是否已存在
+                    
                     target_params = tool_page.config_data[tab_name][self.title]
                     if not any(p['param_name'] == new_param_info['param_name'] for p in target_params):
                         target_params.append(new_param_info.copy())
@@ -3939,14 +3939,14 @@ class ParameterSection(QWidget):
                 tool_page.system_log_tab.append_system_log(f"同步配置到其他选项卡失败: {e}", "error")
     
     def update_layout_fast(self):
-        """快速更新布局，避免重建整个UI"""
+        
         try:
-            # 获取现有的布局容器
+            
             layout = self.layout()
             if not layout:
                 return
             
-            # 找到参数容器
+            
             param_container = None
             for i in range(layout.count()):
                 item = layout.itemAt(i)
@@ -3961,26 +3961,26 @@ class ParameterSection(QWidget):
             if not param_container:
                 return
             
-            # 清理现有布局但保留控件
+            
             container_layout = param_container.layout()
             if container_layout:
-                # 移除所有控件但不删除
+                
                 while container_layout.count():
                     child = container_layout.takeAt(0)
                 
-                # 重新添加控件到布局
+                
                 if self.title == "勾选项区":
-                    # 网格布局，3列
+                    
                     for i, param_widget in enumerate(self.param_widgets):
                         row = i // 3
                         col = i % 3
                         container_layout.addWidget(param_widget, row, col)
                 else:
-                    # 垂直布局，1列
+                    
                     for param_widget in self.param_widgets:
                         container_layout.addWidget(param_widget)
                 
-                # 添加弹性空间
+                
                 if self.title == "勾选项区":
                     container_layout.addItem(QSpacerItem(20, 40, QSizePolicy.Minimum, QSizePolicy.Expanding), 
                                            len(self.param_widgets) // 3 + 1, 0)
@@ -3993,38 +3993,38 @@ class ParameterSection(QWidget):
                 tool_page.system_log_tab.append_system_log(f"快速更新布局失败: {e}", "error")
     
     def convert_parameter_type(self, param_info):
-        """转换参数类型"""
+        
         new_param_info = param_info.copy()
         
-        # 根据目标区域转换类型
+        
         if self.title == "勾选项区":
-            # 转换为勾选项
+            
             new_param_info['type'] = '1'
         elif self.title == "输入框区":
-            # 转换为输入项
+            
             new_param_info['type'] = '2'
         
         return new_param_info
     
     def add_converted_parameter(self, param_info, target_index):
-        """添加转换后的参数到指定位置"""
+        
         try:
-            # 插入到参数列表的指定位置
+            
             if target_index >= len(self.params):
                 self.params.append(param_info)
             else:
                 self.params.insert(target_index, param_info)
             
-            # 创建新的参数控件
+            
             param_widget = ParameterWidget(param_info)
             
-            # 插入到控件列表的指定位置
+            
             if target_index >= len(self.param_widgets):
                 self.param_widgets.append(param_widget)
             else:
                 self.param_widgets.insert(target_index, param_widget)
             
-            # 更新布局
+            
             self.update_layout()
             
         except Exception as e:
@@ -4033,28 +4033,28 @@ class ParameterSection(QWidget):
                 tool_page.system_log_tab.append_system_log(f"添加转换参数失败: {e}", "error")
     
     def add_converted_parameter_with_sync(self, param_info, target_index):
-        """添加转换后的参数到指定位置，并同步到其他选项卡"""
+        
         try:
             tool_page = self.get_tool_operation_page()
             if not tool_page:
                 return
             
-            # 添加到当前区域
+            
             self.add_converted_parameter(param_info, target_index)
             
-            # 更新全局配置数据
+            
             current_tab_name = tool_page.param_tabs.tabText(tool_page.param_tabs.currentIndex())
             
-            # 确保配置数据结构存在
+            
             if current_tab_name not in tool_page.config_data:
                 tool_page.config_data[current_tab_name] = {}
             if self.title not in tool_page.config_data[current_tab_name]:
                 tool_page.config_data[current_tab_name][self.title] = []
             
-            # 更新配置数据中的参数列表
+            
             tool_page.config_data[current_tab_name][self.title] = self.params.copy()
             
-            # 同步到其他选项卡
+            
             tool_page.sync_parameter_addition(param_info, self.title, current_tab_name)
             
         except Exception as e:
@@ -4944,7 +4944,7 @@ class ToolOperationPage(QWidget):
             }
         """)
         
-        # 添加全局搜索栏
+        
         global_search_container = self.create_global_search_bar()
         layout.addWidget(global_search_container)
         
@@ -4954,7 +4954,7 @@ class ToolOperationPage(QWidget):
         return widget
     
     def create_global_search_bar(self):
-        """创建全局搜索栏"""
+        
         search_container = QWidget()
         search_container.setStyleSheet("""
             QWidget {
@@ -4968,19 +4968,19 @@ class ToolOperationPage(QWidget):
         search_layout.setContentsMargins(8, 6, 8, 6)
         search_layout.setSpacing(12)
         
-        # 搜索图标和标签
+        
         search_icon = QLabel("🔍 全局搜索:")
         search_icon.setFont(QFont(get_system_font(), 9, QFont.Bold))
         search_icon.setStyleSheet("color: #495057; border: none; background: transparent;")
         search_icon.setFixedWidth(90)
         
-        # 全局搜索输入框
+        
         self.global_search_input = QLineEdit()
         self.global_search_input.setPlaceholderText("在所有参数中搜索（参数名、显示名、介绍等）...")
         self.global_search_input.setFont(QFont(get_system_font(), 9))
         self.global_search_input.textChanged.connect(self.on_global_search_changed)
         
-        # 设置全局搜索框样式
+        
         self.global_search_input.setStyleSheet("""
             QLineEdit {
                 border: 1px solid #ced4da;
@@ -5001,12 +5001,12 @@ class ToolOperationPage(QWidget):
             }
         """)
         
-        # 全局清除按钮
+        
         self.global_clear_btn = QPushButton("清除")
         self.global_clear_btn.setFont(QFont(get_system_font(), 8))
         self.global_clear_btn.setFixedSize(50, 28)
         self.global_clear_btn.clicked.connect(self.clear_global_search)
-        self.global_clear_btn.setVisible(False)  # 初始隐藏
+        self.global_clear_btn.setVisible(False)  
         
         self.global_clear_btn.setStyleSheet("""
             QPushButton {
@@ -5026,13 +5026,13 @@ class ToolOperationPage(QWidget):
             }
         """)
         
-        # 搜索结果统计标签
+        
         self.global_result_label = QLabel()
         self.global_result_label.setFont(QFont(get_system_font(), 8))
         self.global_result_label.setStyleSheet("color: #6c757d; border: none; background: transparent;")
         self.global_result_label.setVisible(False)
         
-        # 搜索模式选择
+        
         search_mode_label = QLabel("搜索模式:")
         search_mode_label.setFont(QFont(get_system_font(), 8))
         search_mode_label.setStyleSheet("color: #6c757d; border: none; background: transparent;")
@@ -5066,7 +5066,7 @@ class ToolOperationPage(QWidget):
             }
         """)
         
-        # 布局
+        
         search_layout.addWidget(search_icon)
         search_layout.addWidget(self.global_search_input, 1)
         search_layout.addWidget(self.global_clear_btn)
@@ -5078,7 +5078,7 @@ class ToolOperationPage(QWidget):
         return search_container
     
     def on_global_search_changed(self, text):
-        """全局搜索文本变化处理"""
+        
         self.global_clear_btn.setVisible(bool(text))
         
         if text.strip():
@@ -5087,33 +5087,33 @@ class ToolOperationPage(QWidget):
             self.clear_all_search_highlights()
     
     def clear_global_search(self):
-        """清除全局搜索"""
+        
         self.global_search_input.clear()
         self.clear_all_search_highlights()
     
     def on_search_mode_changed(self, mode):
-        """搜索模式变化处理"""
+        
         search_text = self.global_search_input.text().strip()
         if search_text:
             self.perform_global_search(search_text)
     
     def perform_global_search(self, search_text):
-        """执行全局搜索"""
+        
         total_matches = 0
         total_params = 0
         search_mode = self.search_mode_combo.currentText()
         
-        # 遍历所有选项卡
+        
         for tab_index in range(self.param_tabs.count()):
             tab_widget = self.param_tabs.widget(tab_index)
             if isinstance(tab_widget, ToolParameterTab):
-                # 遍历选项卡中的所有区域
+                
                 for section in tab_widget.findChildren(ParameterSection):
                     section_matches = self.search_in_section(section, search_text, search_mode)
                     total_matches += section_matches
                     total_params += len(section.param_widgets)
         
-        # 更新全局搜索结果统计
+        
         if total_matches == 0:
             self.global_result_label.setText("❌ 未找到匹配的参数")
             self.global_result_label.setStyleSheet("color: #dc3545; border: none; background: transparent; font-weight: 500;")
@@ -5123,14 +5123,14 @@ class ToolOperationPage(QWidget):
         
         self.global_result_label.setVisible(True)
         
-        # 记录搜索操作
+        
         self.system_log_tab.append_system_log(
             f"全局搜索 '{search_text}' ({search_mode}): 找到 {total_matches} 个匹配参数",
             "info"
         )
     
     def search_in_section(self, section, search_text, search_mode):
-        """在指定区域中搜索"""
+        
         matches = 0
         
         for param_widget in section.param_widgets:
@@ -5154,8 +5154,8 @@ class ToolOperationPage(QWidget):
         return matches
     
     def smart_search_match(self, param_info, search_text):
-        """智能搜索匹配"""
-        # 检查所有相关字段
+        
+        
         fields_to_search = [
             param_info.get('param_name', ''),
             param_info.get('display_name', ''),
@@ -5170,7 +5170,7 @@ class ToolOperationPage(QWidget):
         return False
     
     def exact_search_match(self, param_info, search_text):
-        """精确匹配搜索"""
+        
         fields_to_search = [
             param_info.get('param_name', ''),
             param_info.get('display_name', ''),
@@ -5185,7 +5185,7 @@ class ToolOperationPage(QWidget):
         return False
     
     def regex_search_match(self, param_info, search_text):
-        """正则表达式搜索"""
+        
         try:
             import re
             pattern = re.compile(search_text, re.IGNORECASE)
@@ -5202,14 +5202,14 @@ class ToolOperationPage(QWidget):
                 if pattern.search(field):
                     return True
         except re.error:
-            # 正则表达式语法错误，回退到普通搜索
+            
             return self.smart_search_match(param_info, search_text.lower())
         
         return False
     
     def clear_all_search_highlights(self):
-        """清除所有搜索高亮"""
-        # 遍历所有选项卡和区域
+        
+        
         for tab_index in range(self.param_tabs.count()):
             tab_widget = self.param_tabs.widget(tab_index)
             if isinstance(tab_widget, ToolParameterTab):
@@ -5490,26 +5490,26 @@ class ToolOperationPage(QWidget):
         current_tab.update_all_required_styles()
     
     def save_config_to_file(self):
-        """保存当前配置到文件"""
+        
         try:
             config_path = os.path.join("tools", self.tool_name, "wct_config.txt")
             
-            # 创建备份
+            
             backup_path = config_path + ".bak"
             if os.path.exists(config_path):
                 import shutil
                 shutil.copy2(config_path, backup_path)
                 self.system_log_tab.append_system_log(f"配置文件已备份到: {backup_path}", "info")
             
-            # 写入新的配置文件
+            
             with open(config_path, 'w', encoding='utf-8') as f:
-                # 写入常用参数
+                
                 if '常用参数' in self.config_data:
                     f.write("%常用参数\n")
                     self._write_section_to_file(f, self.config_data['常用参数'])
                     f.write("\n")
                 
-                # 写入全部参数
+                
                 if '全部参数' in self.config_data:
                     f.write("%全部参数\n")
                     self._write_section_to_file(f, self.config_data['全部参数'])
@@ -5522,7 +5522,7 @@ class ToolOperationPage(QWidget):
             self.system_log_tab.append_system_log(f"详细错误: {traceback.format_exc()}", "error")
     
     def _write_section_to_file(self, file, section_data):
-        """写入配置文件的某个区域"""
+        
         for subsection_name, params in section_data.items():
             if subsection_name in ['勾选项区', '输入框区']:
                 if subsection_name == '勾选项区':
@@ -5532,12 +5532,12 @@ class ToolOperationPage(QWidget):
                 
                 for param in params:
                     required_flag = '1' if param.get('required', False) else '0'
-                    # 确保参数值不为空，并清理换行符
+                    
                     param_name = str(param.get('param_name', '')).replace('\n', ' ').strip()
                     display_name = str(param.get('display_name', '')).replace('\n', ' ').strip()
                     description = str(param.get('description', '')).replace('\n', ' ').strip()
                     
-                    # 如果参数名或显示名为空，跳过这个参数
+                    
                     if not param_name or not display_name:
                         continue
                     
@@ -5546,17 +5546,17 @@ class ToolOperationPage(QWidget):
                 file.write("\n")
     
     def reload_config(self):
-        """重新加载配置"""
+        
         self.load_config()
-        # 更新所有选项卡的必填样式
+        
         for i in range(self.param_tabs.count()):
             tab = self.param_tabs.widget(i)
             if hasattr(tab, 'update_all_required_styles'):
                 tab.update_all_required_styles()
     
     def sync_required_status(self, param_name, required_status):
-        """同步必填状态到所有选项卡"""
-        # 更新配置数据中的必填状态
+        
+        
         for section_name in ['常用参数', '全部参数']:
             if section_name in self.config_data:
                 for subsection_name in ['勾选项区', '输入框区']:
@@ -5565,7 +5565,7 @@ class ToolOperationPage(QWidget):
                             if param['param_name'] == param_name:
                                 param['required'] = required_status
         
-        # 更新所有界面上的参数控件
+        
         for i in range(self.param_tabs.count()):
             tab_widget = self.param_tabs.widget(i)
             if hasattr(tab_widget, 'sections'):
@@ -5576,17 +5576,17 @@ class ToolOperationPage(QWidget):
                             param_widget.update_ui_from_param_info()
     
     def move_parameter_between_tabs(self, param_info, from_tab, to_tab):
-        """在选项卡之间移动参数"""
+        
         try:
-            # 确定源和目标配置区域
+            
             from_section = from_tab
             to_section = to_tab
             
-            # 确定参数类型对应的子区域
+            
             param_type = param_info['type']
             subsection = '勾选项区' if param_type == '1' else '输入框区'
             
-            # 从源区域移除参数
+            
             if (from_section in self.config_data and 
                 subsection in self.config_data[from_section]):
                 
@@ -5599,31 +5599,31 @@ class ToolOperationPage(QWidget):
                     self.system_log_tab.append_system_log(f"在{from_section}中未找到参数", "error")
                     return
             
-            # 添加到目标区域
+            
             if to_section not in self.config_data:
                 self.config_data[to_section] = {}
             if subsection not in self.config_data[to_section]:
                 self.config_data[to_section][subsection] = []
             
-            # 检查目标区域是否已存在同名参数
+            
             target_params = self.config_data[to_section][subsection]
             for param in target_params:
                 if param['param_name'] == param_info['param_name']:
                     self.system_log_tab.append_system_log(f"目标区域已存在同名参数", "warning")
-                    # 恢复到源区域
+                    
                     self.config_data[from_section][subsection].append(removed_param)
                     return
             
-            # 添加到目标区域
+            
             self.config_data[to_section][subsection].append(removed_param)
             
-            # 保存配置文件
+            
             self.save_config_to_file()
             
-            # 重新加载界面
+            
             self.reload_config()
             
-            # 切换到目标选项卡
+            
             for i in range(self.param_tabs.count()):
                 if self.param_tabs.tabText(i) == to_section:
                     self.param_tabs.setCurrentIndex(i)
@@ -5638,16 +5638,16 @@ class ToolOperationPage(QWidget):
             self.system_log_tab.append_system_log(f"移动参数失败: {e}", "error")
     
     def add_parameter_to_section(self, param_info, section_title):
-        """添加新参数到指定区域"""
+        
         try:
-            # 确定当前选项卡
+            
             current_tab_name = self.param_tabs.tabText(self.param_tabs.currentIndex())
             
-            # 确定参数类型对应的子区域
+            
             param_type = param_info['type']
             subsection = '勾选项区' if param_type == '1' else '输入框区'
             
-            # 检查参数名是否已存在
+            
             if current_tab_name in self.config_data:
                 if subsection in self.config_data[current_tab_name]:
                     for existing_param in self.config_data[current_tab_name][subsection]:
@@ -5655,7 +5655,7 @@ class ToolOperationPage(QWidget):
                             self.system_log_tab.append_system_log(f"参数名 '{param_info['param_name']}' 已存在", "error")
                             return
             
-            # 添加到配置数据
+            
             if current_tab_name not in self.config_data:
                 self.config_data[current_tab_name] = {}
             if subsection not in self.config_data[current_tab_name]:
@@ -5663,10 +5663,10 @@ class ToolOperationPage(QWidget):
             
             self.config_data[current_tab_name][subsection].append(param_info)
             
-            # 保存配置文件
+            
             self.save_config_to_file()
             
-            # 重新加载界面
+            
             self.reload_config()
             
             self.system_log_tab.append_system_log(
@@ -5678,13 +5678,13 @@ class ToolOperationPage(QWidget):
             self.system_log_tab.append_system_log(f"添加参数失败: {e}", "error")
     
     def update_parameter_in_config(self, old_param_name, new_param_info):
-        """更新配置数据中的参数信息"""
+        
         try:
-            # 确定参数类型对应的子区域
+            
             param_type = new_param_info['type']
             subsection = '勾选项区' if param_type == '1' else '输入框区'
             
-            # 在所有选项卡中查找并更新参数
+            
             for section_name in ['常用参数', '全部参数']:
                 if section_name in self.config_data:
                     for subsection_name in ['勾选项区', '输入框区']:
@@ -5692,16 +5692,16 @@ class ToolOperationPage(QWidget):
                             params_list = self.config_data[section_name][subsection_name]
                             for i, param in enumerate(params_list):
                                 if param['param_name'] == old_param_name:
-                                    # 如果参数类型改变了，需要移动到对应的子区域
+                                    
                                     if subsection_name != subsection:
-                                        # 从当前子区域移除
+                                        
                                         removed_param = params_list.pop(i)
-                                        # 添加到正确的子区域
+                                        
                                         if subsection not in self.config_data[section_name]:
                                             self.config_data[section_name][subsection] = []
                                         self.config_data[section_name][subsection].append(new_param_info.copy())
                                     else:
-                                        # 在同一子区域内更新
+                                        
                                         params_list[i] = new_param_info.copy()
                                     break
             
@@ -5714,13 +5714,13 @@ class ToolOperationPage(QWidget):
             self.system_log_tab.append_system_log(f"更新参数信息失败: {e}", "error")
     
     def remove_parameter_from_common(self, param_info):
-        """从常用参数中移除参数"""
+        
         try:
-            # 确定参数类型对应的子区域
+            
             param_type = param_info['type']
             subsection = '勾选项区' if param_type == '1' else '输入框区'
             
-            # 从常用参数中移除
+            
             if ('常用参数' in self.config_data and 
                 subsection in self.config_data['常用参数']):
                 
@@ -5733,10 +5733,10 @@ class ToolOperationPage(QWidget):
                     self.system_log_tab.append_system_log(f"在常用参数中未找到参数", "error")
                     return
             
-            # 保存配置文件
+            
             self.save_config_to_file()
             
-            # 重新加载界面
+            
             self.reload_config()
             
             self.system_log_tab.append_system_log(
@@ -5748,36 +5748,36 @@ class ToolOperationPage(QWidget):
             self.system_log_tab.append_system_log(f"移除参数失败: {e}", "error")
     
     def copy_parameter_to_common(self, param_info):
-        """复制参数到常用参数"""
+        
         try:
-            # 确定参数类型对应的子区域
+            
             param_type = param_info['type']
             subsection = '勾选项区' if param_type == '1' else '输入框区'
             
-            # 确保常用参数区域存在
+            
             if '常用参数' not in self.config_data:
                 self.config_data['常用参数'] = {}
             if subsection not in self.config_data['常用参数']:
                 self.config_data['常用参数'][subsection] = []
             
-            # 检查常用参数中是否已存在同名参数
+            
             params_list = self.config_data['常用参数'][subsection]
             for param in params_list:
                 if param['param_name'] == param_info['param_name']:
                     self.system_log_tab.append_system_log(f"常用参数中已存在该参数", "warning")
                     return
             
-            # 复制参数到常用参数（创建副本）
+            
             param_copy = param_info.copy()
             params_list.append(param_copy)
             
-            # 保存配置文件
+            
             self.save_config_to_file()
             
-            # 重新加载界面
+            
             self.reload_config()
             
-            # 切换到常用参数选项卡
+            
             for i in range(self.param_tabs.count()):
                 if self.param_tabs.tabText(i) == "常用参数":
                     self.param_tabs.setCurrentIndex(i)
@@ -5792,7 +5792,7 @@ class ToolOperationPage(QWidget):
             self.system_log_tab.append_system_log(f"添加参数到常用参数失败: {e}", "error")
     
     def show_custom_question(self, title, message):
-        """显示自定义确认对话框"""
+        
         dialog = QDialog(self)
         dialog.setWindowTitle(title)
         dialog.setFixedSize(500, 260)
@@ -5897,34 +5897,34 @@ class ToolOperationPage(QWidget):
         return dialog.exec() == QDialog.Accepted
 
     def sync_parameter_order(self, section_title, new_params_order):
-        """同步参数顺序到全局配置数据"""
+        
         try:
-            # 确定当前选项卡
+            
             current_tab_name = self.param_tabs.tabText(self.param_tabs.currentIndex())
             
-            # 确定参数类型对应的子区域
+            
             subsection = section_title
             
-            # 更新全局配置数据中的参数顺序
+            
             if current_tab_name in self.config_data:
                 if subsection in self.config_data[current_tab_name]:
                     self.config_data[current_tab_name][subsection] = new_params_order.copy()
                     
-                    # 同步到其他选项卡（如果存在相同参数）
+                    
                     for other_tab_name in ['常用参数', '全部参数']:
                         if (other_tab_name != current_tab_name and 
                             other_tab_name in self.config_data and 
                             subsection in self.config_data[other_tab_name]):
                             
-                            # 创建参数名到参数信息的映射
+                            
                             param_map = {param['param_name']: param for param in new_params_order}
                             other_params = self.config_data[other_tab_name][subsection]
                             
-                            # 重新排序其他选项卡中的相同参数
+                            
                             reordered_other_params = []
                             remaining_params = other_params.copy()
                             
-                            # 按新顺序添加存在的参数
+                            
                             for param in new_params_order:
                                 param_name = param['param_name']
                                 for other_param in remaining_params:
@@ -5933,10 +5933,10 @@ class ToolOperationPage(QWidget):
                                         remaining_params.remove(other_param)
                                         break
                             
-                            # 添加剩余的参数（在其他选项卡中存在但当前选项卡中不存在的）
+                            
                             reordered_other_params.extend(remaining_params)
                             
-                            # 更新其他选项卡的配置
+                            
                             self.config_data[other_tab_name][subsection] = reordered_other_params
             
             self.system_log_tab.append_system_log(
@@ -5948,12 +5948,12 @@ class ToolOperationPage(QWidget):
             self.system_log_tab.append_system_log(f"同步参数顺序失败: {e}", "error")
     
     def remove_parameter_from_section(self, param_name, section_name):
-        """从指定区域移除参数"""
+        
         try:
-            # 确定当前选项卡
+            
             current_tab_name = self.param_tabs.tabText(self.param_tabs.currentIndex())
             
-            # 在配置数据中查找并移除参数
+            
             for subsection_name in ['勾选项区', '输入框区']:
                 if (current_tab_name in self.config_data and 
                     subsection_name in self.config_data[current_tab_name]):
@@ -5963,7 +5963,7 @@ class ToolOperationPage(QWidget):
                         if param['param_name'] == param_name:
                             removed_param = params_list.pop(i)
                             
-                            # 同步移除其他选项卡中的相同参数
+                            
                             self.sync_parameter_removal(param_name, subsection_name, current_tab_name)
                             
                             self.system_log_tab.append_system_log(
@@ -5979,7 +5979,7 @@ class ToolOperationPage(QWidget):
             return None
     
     def sync_parameter_removal(self, param_name, subsection_name, exclude_tab):
-        """同步参数移除到其他选项卡"""
+        
         try:
             for tab_name in ['常用参数', '全部参数']:
                 if (tab_name != exclude_tab and 
@@ -5995,9 +5995,9 @@ class ToolOperationPage(QWidget):
             self.system_log_tab.append_system_log(f"同步移除参数失败: {e}", "error")
     
     def sync_parameter_addition(self, param_info, target_section, exclude_tab):
-        """同步参数添加到其他选项卡"""
+        
         try:
-            # 确定参数类型对应的子区域
+            
             param_type = param_info['type']
             subsection = '勾选项区' if param_type == '1' else '输入框区'
             
@@ -6005,16 +6005,16 @@ class ToolOperationPage(QWidget):
                 if (tab_name != exclude_tab and 
                     tab_name in self.config_data):
                     
-                    # 确保子区域存在
+                    
                     if subsection not in self.config_data[tab_name]:
                         self.config_data[tab_name][subsection] = []
                     
-                    # 检查参数是否已存在
+                    
                     params_list = self.config_data[tab_name][subsection]
                     param_exists = any(p['param_name'] == param_info['param_name'] for p in params_list)
                     
                     if not param_exists:
-                        # 添加参数副本
+                        
                         param_copy = param_info.copy()
                         params_list.append(param_copy)
                         
@@ -6130,17 +6130,17 @@ class ToolOperationPage(QWidget):
         dialog.exec()
 
 class PromotionPage(QWidget):
-    """推广推广页面"""
+    
     
     def __init__(self, parent=None):
         super().__init__(parent)
         self.config_file = "promotion_config.json"
         self.ads_enabled = self.load_ads_config()
-        # 延迟初始化UI，避免绘制问题
+        
         QTimer.singleShot(0, self.setup_ui)
     
     def load_ads_config(self):
-        """加载推广配置"""
+        
         try:
             if os.path.exists(self.config_file):
                 with open(self.config_file, 'r', encoding='utf-8') as f:
@@ -6151,7 +6151,7 @@ class PromotionPage(QWidget):
         return True
     
     def save_ads_config(self):
-        """保存推广配置"""
+        
         try:
             config = {'ads_enabled': self.ads_enabled}
             with open(self.config_file, 'w', encoding='utf-8') as f:
@@ -6160,15 +6160,15 @@ class PromotionPage(QWidget):
             print(f"保存推广配置失败: {e}")
     
     def setup_ui(self):
-        """设置界面"""
+        
         layout = QVBoxLayout()
         layout.setContentsMargins(20, 20, 20, 20)
         layout.setSpacing(20)
         
-        # 顶部控制区域
+        
         top_layout = QHBoxLayout()
         
-        # 标题
+        
         title_label = QLabel("推广信息")
         title_label.setFont(QFont(get_system_font(), 14, QFont.Bold))
         title_label.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed)
@@ -6184,7 +6184,7 @@ class PromotionPage(QWidget):
         
         top_layout.addStretch()
         
-        # 推广开关按钮
+        
         self.ads_toggle_btn = QPushButton("关闭推广" if self.ads_enabled else "开启推广")
         self.ads_toggle_btn.setFont(QFont(get_system_font(), 9))
         self.ads_toggle_btn.setFixedHeight(32)
@@ -6204,7 +6204,7 @@ class PromotionPage(QWidget):
             QPushButton:pressed {
                 background-color: #a71e2a;
             }
-        """ if self.ads_enabled else """
+        
             QPushButton {
                 background-color: #28a745;
                 color: white;
@@ -6225,7 +6225,7 @@ class PromotionPage(QWidget):
         
         layout.addLayout(top_layout)
         
-        # 推广内容区域
+        
         self.content_widget = QWidget()
         self.setup_content()
         layout.addWidget(self.content_widget)
@@ -6233,8 +6233,8 @@ class PromotionPage(QWidget):
         self.setLayout(layout)
     
     def setup_content(self):
-        """设置推广内容"""
-        # 清理现有布局
+        
+        
         if self.content_widget.layout():
             old_layout = self.content_widget.layout()
             while old_layout.count():
@@ -6244,7 +6244,7 @@ class PromotionPage(QWidget):
             QWidget().setLayout(old_layout)
         
         if not self.ads_enabled:
-            # 显示推广已关闭信息
+            
             layout = QVBoxLayout()
             layout.setAlignment(Qt.AlignCenter)
             
@@ -6264,15 +6264,15 @@ class PromotionPage(QWidget):
             self.content_widget.setLayout(layout)
             return
         
-        # 显示推广内容
+        
         layout = QHBoxLayout()
         layout.setSpacing(15)
         
-        # 左侧推广区域 (xm.txt)
+        
         left_ad = self.create_ad_widget("promotion/xm.txt")
         layout.addWidget(left_ad)
         
-        # 分割线1
+        
         separator1 = QFrame()
         separator1.setFrameShape(QFrame.VLine)
         separator1.setFrameShadow(QFrame.Sunken)
@@ -6286,11 +6286,11 @@ class PromotionPage(QWidget):
         """)
         layout.addWidget(separator1)
         
-        # 中间赞助信息区域 (zz.txt)
+        
         sponsor_widget = self.create_sponsor_widget("promotion/zz.txt")
         layout.addWidget(sponsor_widget)
         
-        # 分割线2
+        
         separator2 = QFrame()
         separator2.setFrameShape(QFrame.VLine)
         separator2.setFrameShadow(QFrame.Sunken)
@@ -6304,14 +6304,14 @@ class PromotionPage(QWidget):
         """)
         layout.addWidget(separator2)
         
-        # 右侧推广区域 (gg.txt)
+        
         right_ad = self.create_ad_widget("promotion/gg.txt")
         layout.addWidget(right_ad)
         
         self.content_widget.setLayout(layout)
     
     def create_ad_widget(self, file_path):
-        """创建推广widget"""
+        
         widget = QWidget()
         widget.setStyleSheet("""
             QWidget {
@@ -6321,7 +6321,7 @@ class PromotionPage(QWidget):
             }
         """)
         
-        # 使用滚动区域来支持多个推广项目
+        
         scroll_area = QScrollArea()
         scroll_area.setWidgetResizable(True)
         scroll_area.setFrameShape(QFrame.NoFrame)
@@ -6339,7 +6339,7 @@ class PromotionPage(QWidget):
         layout.setContentsMargins(5, 5, 5, 5)
         layout.setAlignment(Qt.AlignTop)
         
-        # 读取推广内容
+        
         try:
             if os.path.exists(file_path):
                 with open(file_path, 'r', encoding='utf-8') as f:
@@ -6348,12 +6348,12 @@ class PromotionPage(QWidget):
                     if lines:
                         for line in lines:
                             line = line.strip()
-                            if line:  # 跳过空行
+                            if line:  
                                 item_widget = self.create_promotion_item(line)
                                 if item_widget:
                                     layout.addWidget(item_widget)
                     else:
-                        # 文件为空
+                        
                         empty_label = QLabel("暂无推广内容")
                         empty_label.setFont(QFont(get_system_font(), 10))
                         empty_label.setAlignment(Qt.AlignCenter)
@@ -6365,7 +6365,7 @@ class PromotionPage(QWidget):
                         """)
                         layout.addWidget(empty_label)
             else:
-                # 文件不存在
+                
                 error_label = QLabel(f"推广文件 {file_path} 不存在")
                 error_label.setFont(QFont(get_system_font(), 10))
                 error_label.setAlignment(Qt.AlignCenter)
@@ -6378,7 +6378,7 @@ class PromotionPage(QWidget):
                 layout.addWidget(error_label)
         
         except Exception as e:
-            # 读取错误
+            
             error_label = QLabel(f"读取推广内容失败: {str(e)}")
             error_label.setFont(QFont(get_system_font(), 10))
             error_label.setAlignment(Qt.AlignCenter)
@@ -6394,7 +6394,7 @@ class PromotionPage(QWidget):
         scroll_content.setLayout(layout)
         scroll_area.setWidget(scroll_content)
         
-        # 主容器布局
+        
         main_layout = QVBoxLayout()
         main_layout.setContentsMargins(15, 15, 15, 15)
         main_layout.setSpacing(0)
@@ -6404,7 +6404,7 @@ class PromotionPage(QWidget):
         return widget
     
     def create_sponsor_widget(self, file_path):
-        """创建赞助信息widget"""
+        
         widget = QWidget()
         widget.setStyleSheet("""
             QWidget {
@@ -6413,12 +6413,12 @@ class PromotionPage(QWidget):
             }
         """)
         
-        # 主容器布局
+        
         main_layout = QVBoxLayout()
         main_layout.setContentsMargins(15, 15, 15, 15)
         main_layout.setSpacing(10)
         
-        # 标题
+        
         title_label = QLabel("🎉 赞助榜")
         title_label.setFont(QFont(get_system_font(), 12, QFont.Bold))
         title_label.setAlignment(Qt.AlignCenter)
@@ -6433,7 +6433,7 @@ class PromotionPage(QWidget):
         """)
         main_layout.addWidget(title_label)
         
-        # 使用滚动区域
+        
         scroll_area = QScrollArea()
         scroll_area.setWidgetResizable(True)
         scroll_area.setFrameShape(QFrame.NoFrame)
@@ -6457,20 +6457,20 @@ class PromotionPage(QWidget):
                     lines = f.readlines()
                 
                 if lines:
-                    # 解析赞助数据
+                    
                     ranking_data, history_data = self.parse_sponsor_data(lines)
                     
-                    # 显示排名榜
+                    
                     if ranking_data:
                         ranking_widget = self.create_ranking_widget(ranking_data)
                         content_layout.addWidget(ranking_widget)
                     
-                    # 显示赞助历史（最近几条）
+                    
                     if history_data:
-                        history_widget = self.create_history_widget(history_data[:8])  # 只显示最近8条
+                        history_widget = self.create_history_widget(history_data[:8])  
                         content_layout.addWidget(history_widget)
                 else:
-                    # 文件为空
+                    
                     empty_label = QLabel("暂无赞助信息")
                     empty_label.setFont(QFont(get_system_font(), 10))
                     empty_label.setAlignment(Qt.AlignCenter)
@@ -6482,7 +6482,7 @@ class PromotionPage(QWidget):
                     """)
                     content_layout.addWidget(empty_label)
             else:
-                # 文件不存在
+                
                 error_label = QLabel(f"赞助文件 {file_path} 不存在")
                 error_label.setFont(QFont(get_system_font(), 10))
                 error_label.setAlignment(Qt.AlignCenter)
@@ -6495,7 +6495,7 @@ class PromotionPage(QWidget):
                 content_layout.addWidget(error_label)
         
         except Exception as e:
-            # 读取错误
+            
             error_label = QLabel(f"读取赞助信息失败: {str(e)}")
             error_label.setFont(QFont(get_system_font(), 10))
             error_label.setAlignment(Qt.AlignCenter)
@@ -6516,7 +6516,7 @@ class PromotionPage(QWidget):
         return widget
     
     def parse_sponsor_data(self, lines):
-        """解析赞助数据"""
+        
         ranking_data = []
         history_data = []
         
@@ -6527,7 +6527,7 @@ class PromotionPage(QWidget):
             if not line:
                 continue
             
-            # 检测章节
+            
             if line.startswith("排名"):
                 current_section = "ranking"
                 continue
@@ -6535,9 +6535,9 @@ class PromotionPage(QWidget):
                 current_section = "history"
                 continue
             elif line.startswith("时间"):
-                continue  # 跳过表头
+                continue  
             
-            # 解析数据
+            
             parts = line.split('\t')
             if len(parts) >= 3:
                 if current_section == "ranking":
@@ -6556,7 +6556,7 @@ class PromotionPage(QWidget):
         return ranking_data, history_data
     
     def create_ranking_widget(self, ranking_data):
-        """创建排名榜widget"""
+        
         widget = QWidget()
         widget.setStyleSheet("""
             QWidget {
@@ -6570,7 +6570,7 @@ class PromotionPage(QWidget):
         layout.setContentsMargins(12, 10, 12, 10)
         layout.setSpacing(8)
         
-        # 排名榜标题
+        
         title = QLabel("🏆 排行榜")
         title.setFont(QFont(get_system_font(), 10, QFont.Bold))
         title.setStyleSheet("""
@@ -6582,8 +6582,8 @@ class PromotionPage(QWidget):
         """)
         layout.addWidget(title)
         
-        # 排名条目
-        for item in ranking_data[:5]:  # 只显示前5名
+        
+        for item in ranking_data[:5]:  
             rank_widget = QWidget()
             rank_widget.setFixedHeight(32)
             rank_widget.setStyleSheet("""
@@ -6598,7 +6598,7 @@ class PromotionPage(QWidget):
             rank_layout.setContentsMargins(8, 4, 8, 4)
             rank_layout.setSpacing(8)
             
-            # 排名图标
+            
             rank_icon = QLabel()
             rank_num = item['rank']
             if rank_num == '1':
@@ -6613,7 +6613,7 @@ class PromotionPage(QWidget):
             rank_icon.setFont(QFont(get_system_font(), 8))
             rank_layout.addWidget(rank_icon)
             
-            # 姓名
+            
             name_label = QLabel(item['name'])
             name_label.setFont(QFont(get_system_font(), 8))
             name_label.setStyleSheet("QLabel { color: #495057; }")
@@ -6621,7 +6621,7 @@ class PromotionPage(QWidget):
             
             rank_layout.addStretch()
             
-            # 金额
+            
             amount_label = QLabel(f"¥{item['amount']}")
             amount_label.setFont(QFont(get_system_font(), 8, QFont.Bold))
             amount_label.setStyleSheet("QLabel { color: #28a745; }")
@@ -6634,7 +6634,7 @@ class PromotionPage(QWidget):
         return widget
     
     def create_history_widget(self, history_data):
-        """创建赞助历史widget"""
+        
         widget = QWidget()
         widget.setStyleSheet("""
             QWidget {
@@ -6648,7 +6648,7 @@ class PromotionPage(QWidget):
         layout.setContentsMargins(12, 10, 12, 10)
         layout.setSpacing(8)
         
-        # 历史标题
+        
         title = QLabel("📝 最近赞助")
         title.setFont(QFont(get_system_font(), 10, QFont.Bold))
         title.setStyleSheet("""
@@ -6660,7 +6660,7 @@ class PromotionPage(QWidget):
         """)
         layout.addWidget(title)
         
-        # 历史条目
+        
         for item in history_data:
             history_widget = QWidget()
             history_widget.setFixedHeight(38)
@@ -6676,7 +6676,7 @@ class PromotionPage(QWidget):
             history_layout.setContentsMargins(8, 4, 8, 4)
             history_layout.setSpacing(2)
             
-            # 上行：姓名和金额
+            
             top_layout = QHBoxLayout()
             top_layout.setSpacing(8)
             
@@ -6692,7 +6692,7 @@ class PromotionPage(QWidget):
             amount_label.setStyleSheet("QLabel { color: #28a745; }")
             top_layout.addWidget(amount_label)
             
-            # 下行：时间
+            
             time_label = QLabel(item['time'])
             time_label.setFont(QFont(get_system_font(), 7))
             time_label.setStyleSheet("QLabel { color: #6c757d; }")
@@ -6707,15 +6707,15 @@ class PromotionPage(QWidget):
         return widget
     
     def create_promotion_item(self, line):
-        """创建单个推广项目widget"""
+        
         try:
-            parts = line.split(' ', 2)  # 分割成三部分：名称 URL 描述
+            parts = line.split(' ', 2)  
             if len(parts) >= 3:
                 name, url, description = parts[0], parts[1], parts[2]
                 
-                # 创建项目容器
+                
                 item_widget = QWidget()
-                item_widget.setMinimumHeight(70)  # 设置最小高度，允许自适应
+                item_widget.setMinimumHeight(70)  
                 item_widget.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Minimum)
                 item_widget.setStyleSheet("""
                     QWidget {
@@ -6734,14 +6734,14 @@ class PromotionPage(QWidget):
                 layout.setSpacing(8)
                 layout.setContentsMargins(15, 12, 15, 12)
                 
-                # 项目名称和链接按钮的水平布局
+                
                 header_layout = QHBoxLayout()
                 header_layout.setSpacing(12)
                 
-                # 项目名称
+                
                 name_label = QLabel(name)
                 name_label.setFont(QFont(get_system_font(), 10, QFont.Bold))
-                name_label.setWordWrap(True)  # 允许换行
+                name_label.setWordWrap(True)  
                 name_label.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Minimum)
                 name_label.setStyleSheet("""
                     QLabel {
@@ -6756,10 +6756,10 @@ class PromotionPage(QWidget):
                 
                 header_layout.addStretch()
                 
-                # 访问按钮
+                
                 link_btn = QPushButton("访问")
                 link_btn.setFont(QFont(get_system_font(), 9))
-                link_btn.setFixedSize(55, 30)  # 增加按钮尺寸
+                link_btn.setFixedSize(55, 30)  
                 link_btn.setSizePolicy(QSizePolicy.Fixed, QSizePolicy.Fixed)
                 link_btn.setStyleSheet("""
                     QPushButton {
@@ -6783,14 +6783,14 @@ class PromotionPage(QWidget):
                 
                 layout.addLayout(header_layout)
                 
-                # 描述信息
+                
                 if description:
                     desc_label = QLabel(description)
                     desc_label.setFont(QFont(get_system_font(), 9))
                     desc_label.setWordWrap(True)
                     desc_label.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Minimum)
                     desc_label.setAlignment(Qt.AlignLeft | Qt.AlignTop)
-                    desc_label.setMinimumHeight(20)  # 确保有足够高度显示文字
+                    desc_label.setMinimumHeight(20)  
                     desc_label.setStyleSheet("""
                         QLabel {
                             color: #6c757d;
@@ -6805,7 +6805,7 @@ class PromotionPage(QWidget):
                 item_widget.setLayout(layout)
                 return item_widget
             else:
-                # 格式不正确的行，显示为简单文本
+                
                 error_widget = QWidget()
                 error_widget.setMinimumHeight(40)
                 error_widget.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Minimum)
@@ -6837,18 +6837,18 @@ class PromotionPage(QWidget):
             return None
     
     def open_url(self, url):
-        """打开URL"""
+        
         try:
             QDesktopServices.openUrl(QUrl(url))
         except Exception as e:
             print(f"打开链接失败: {e}")
     
     def toggle_ads(self):
-        """切换推广状态"""
+        
         self.ads_enabled = not self.ads_enabled
         self.save_ads_config()
         
-        # 更新按钮文本和样式
+        
         self.ads_toggle_btn.setText("关闭推广" if self.ads_enabled else "开启推广")
         self.ads_toggle_btn.setStyleSheet("""
             QPushButton {
@@ -6865,7 +6865,7 @@ class PromotionPage(QWidget):
             QPushButton:pressed {
                 background-color: #a71e2a;
             }
-        """ if self.ads_enabled else """
+        
             QPushButton {
                 background-color: #28a745;
                 color: white;
@@ -6882,7 +6882,7 @@ class PromotionPage(QWidget):
             }
         """)
         
-        # 重新设置内容
+        
         self.setup_content()
 
 class MainWindow(QMainWindow):
@@ -6899,7 +6899,7 @@ class MainWindow(QMainWindow):
         self.setWindowTitle("白猫工具箱-v0.0.1_beta")
         self.setGeometry(100, 100, 1400, 900)
         
-        # 设置程序图标
+        
         icon_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "favicon.ico")
         if os.path.exists(icon_path):
             self.setWindowIcon(QIcon(icon_path))
@@ -6958,7 +6958,7 @@ class MainWindow(QMainWindow):
             }
         """)
         
-        # 添加推广页面作为默认页面
+        
         self.right_stack.addTab(self.promotion_page, "推广")
         
         main_splitter.addWidget(self.right_stack)
@@ -6998,7 +6998,7 @@ class MainWindow(QMainWindow):
         title_layout = QVBoxLayout()
         title_layout.setContentsMargins(8, 8, 8, 8)
         
-        # 标题和按钮布局
+        
         title_button_layout = QHBoxLayout()
         
         title_label = QLabel("工具列表")
@@ -7014,7 +7014,7 @@ class MainWindow(QMainWindow):
         """)
         title_button_layout.addWidget(title_label)
         
-        # 添加"返回推广页面"按钮
+        
         home_btn = QPushButton("🏠")
         home_btn.setFont(QFont("Microsoft YaHei", 10))
         home_btn.setToolTip("返回推广页面")
@@ -7038,7 +7038,7 @@ class MainWindow(QMainWindow):
         home_btn.clicked.connect(self.clear_selection)
         title_button_layout.addWidget(home_btn)
         
-        # 添加备份按钮
+        
         backup_btn = QPushButton("💾")
         backup_btn.setFont(QFont("Microsoft YaHei", 10))
         backup_btn.setToolTip("备份配置")
@@ -7081,11 +7081,11 @@ class MainWindow(QMainWindow):
         
         self.tool_list = QListWidget()
         self.tool_list.currentRowChanged.connect(self.on_tool_selected)
-        # 允许取消选择
+        
         self.tool_list.setSelectionMode(QListWidget.SingleSelection)
-        # 添加双击空白处取消选择的功能
+        
         self.tool_list.itemClicked.connect(self.on_item_clicked)
-        # 启用右键菜单
+        
         self.tool_list.setContextMenuPolicy(Qt.CustomContextMenu)
         self.tool_list.customContextMenuRequested.connect(self.show_tool_list_context_menu)
         self.tool_list.setStyleSheet("""
@@ -7147,7 +7147,7 @@ class MainWindow(QMainWindow):
             self.tool_pages[tool] = tool_page
             self.right_stack.addTab(tool_page, "")
         
-        # 确保默认显示推广页面
+        
         self.right_stack.setCurrentIndex(0)
         self.tool_list.setCurrentRow(-1)
     
@@ -7156,27 +7156,27 @@ class MainWindow(QMainWindow):
         if row >= 0:
             tool_name = self.tool_list.item(row).text()
             if tool_name in self.tool_pages:
-                # 因为推广页面是第0个索引，工具页面从索引1开始
+                
                 page_index = list(self.tool_pages.keys()).index(tool_name) + 1
                 self.right_stack.setCurrentIndex(page_index)
         else:
-            # 如果没有选择工具，显示推广页面
+            
             self.right_stack.setCurrentIndex(0)
     
     def on_item_clicked(self, item):
-        """处理列表项点击事件"""
-        # 如果双击同一个已选中的项，则取消选择，返回推广页面
-        # 这里我们简化逻辑，用户可以通过点击空白区域或右键菜单来取消选择
+        
+        
+        
         pass
     
     def clear_selection(self):
-        """清除选择，显示推广页面"""
+        
         self.tool_list.clearSelection()
         self.tool_list.setCurrentRow(-1)
         self.right_stack.setCurrentIndex(0)
     
     def show_tool_list_context_menu(self, position):
-        """显示工具列表右键菜单"""
+        
         menu = QMenu(self)
         menu.setStyleSheet("""
             QMenu {
@@ -7197,11 +7197,11 @@ class MainWindow(QMainWindow):
             }
         """)
         
-        # 添加"返回推广页面"选项
+        
         show_ads_action = menu.addAction("🏠 返回推广页面")
         show_ads_action.triggered.connect(self.clear_selection)
         
-        # 添加配置备份选项
+        
         menu.addSeparator()
         backup_action = menu.addAction("💾 备份配置")
         backup_action.triggered.connect(self.backup_config)
@@ -7209,36 +7209,36 @@ class MainWindow(QMainWindow):
         restore_action = menu.addAction("📁 恢复配置")
         restore_action.triggered.connect(self.restore_config)
         
-        # 如果有选中的工具，添加相关选项
+        
         current_item = self.tool_list.currentItem()
         if current_item:
             menu.addSeparator()
             open_tool_action = menu.addAction(f"🔧 打开 {current_item.text()}")
             open_tool_action.triggered.connect(lambda: self.on_tool_selected(self.tool_list.currentRow()))
             
-            # 添加打开工具文件夹选项
+            
             open_folder_action = menu.addAction(f"📂 打开 {current_item.text()} 文件夹")
             open_folder_action.triggered.connect(lambda: self.open_tool_folder(current_item.text()))
         
         menu.exec(self.tool_list.mapToGlobal(position))
 
     def open_tool_folder(self, tool_name):
-        """打开工具文件夹"""
+        
         try:
             tool_path = os.path.join("tools", tool_name)
             if os.path.exists(tool_path):
-                # 获取绝对路径
+                
                 abs_tool_path = os.path.abspath(tool_path)
                 
-                # 根据操作系统选择合适的命令
+                
                 if platform.system() == "Windows":
-                    # Windows 使用 explorer
+                    
                     subprocess.run(["explorer", abs_tool_path], check=True)
                 elif platform.system() == "Darwin":
-                    # macOS 使用 open
+                    
                     subprocess.run(["open", abs_tool_path], check=True)
                 else:
-                    # Linux 使用 xdg-open
+                    
                     subprocess.run(["xdg-open", abs_tool_path], check=True)
             else:
                 self.show_error_message("文件夹不存在", f"工具文件夹不存在：\n{tool_path}")
@@ -7248,9 +7248,9 @@ class MainWindow(QMainWindow):
             self.show_error_message("打开失败", f"打开工具文件夹时发生错误：\n{str(e)}")
 
     def backup_config(self):
-        """备份配置文件"""
+        
         try:
-            # 获取备份文件名
+            
             timestamp = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
             default_filename = f"白猫工具箱配置备份_{timestamp}.zip"
             
@@ -7264,10 +7264,10 @@ class MainWindow(QMainWindow):
             if not file_path:
                 return
             
-            # 创建备份
+            
             with zipfile.ZipFile(file_path, 'w', zipfile.ZIP_DEFLATED) as backup_zip:
                 
-                # 备份templates目录
+                
                 templates_dir = "templates"
                 if os.path.exists(templates_dir):
                     for root, dirs, files in os.walk(templates_dir):
@@ -7276,7 +7276,7 @@ class MainWindow(QMainWindow):
                             arcname = os.path.relpath(file_path_full, ".")
                             backup_zip.write(file_path_full, arcname)
                 
-                # 备份promotion目录
+                
                 promotion_dir = "promotion"
                 if os.path.exists(promotion_dir):
                     for root, dirs, files in os.walk(promotion_dir):
@@ -7285,15 +7285,15 @@ class MainWindow(QMainWindow):
                             arcname = os.path.relpath(file_path_full, ".")
                             backup_zip.write(file_path_full, arcname)
                 
-                # 备份promotion_config.json
+                
                 if os.path.exists("promotion_config.json"):
                     backup_zip.write("promotion_config.json", "promotion_config.json")
                 
-                # 备份command_history.json
+                
                 if os.path.exists("command_history.json"):
                     backup_zip.write("command_history.json", "command_history.json")
                 
-                # 备份工具配置文件
+                
                 tools_dir = "tools"
                 if os.path.exists(tools_dir):
                     for tool_name in os.listdir(tools_dir):
@@ -7304,17 +7304,17 @@ class MainWindow(QMainWindow):
                                 arcname = os.path.relpath(config_file, ".")
                                 backup_zip.write(config_file, arcname)
                             
-                            # 备份自定义命令文件
+                            
                             custom_cmd_file = os.path.join(tool_path, "custom_command.txt")
                             if os.path.exists(custom_cmd_file):
                                 arcname = os.path.relpath(custom_cmd_file, ".")
                                 backup_zip.write(custom_cmd_file, arcname)
                 
-                # 备份help.txt
+                
                 if os.path.exists("help.txt"):
                     backup_zip.write("help.txt", "help.txt")
                 
-                # 创建备份信息文件
+                
                 backup_info = {
                     "backup_time": datetime.datetime.now().isoformat(),
                     "version": "v0.0.1_beta",
@@ -7338,7 +7338,7 @@ class MainWindow(QMainWindow):
             self.show_error_message("备份失败", f"备份过程中发生错误：\n{str(e)}")
 
     def restore_config(self):
-        """恢复配置文件"""
+        
         try:
             file_path, _ = QFileDialog.getOpenFileName(
                 self,
@@ -7350,17 +7350,17 @@ class MainWindow(QMainWindow):
             if not file_path:
                 return
             
-            # 验证备份文件
+            
             try:
                 with zipfile.ZipFile(file_path, 'r') as backup_zip:
                     file_list = backup_zip.namelist()
                     
-                    # 检查是否包含备份信息文件
+                    
                     if "backup_info.json" in file_list:
                         backup_info_data = backup_zip.read("backup_info.json")
                         backup_info = json.loads(backup_info_data.decode('utf-8'))
                         
-                        # 显示备份信息
+                        
                         info_text = f"备份时间: {backup_info.get('backup_time', '未知')}\n"
                         info_text += f"版本: {backup_info.get('version', '未知')}\n"
                         info_text += f"描述: {backup_info.get('description', '无')}\n\n"
@@ -7394,37 +7394,37 @@ class MainWindow(QMainWindow):
                 self.show_error_message("文件错误", "选择的文件不是有效的ZIP文件")
                 return
             
-            # 执行恢复
+            
             with zipfile.ZipFile(file_path, 'r') as backup_zip:
                 extracted_files = []
                 backup_files = []
                 
                 for file_info in backup_zip.infolist():
-                    # 跳过目录和备份信息文件
+                    
                     if file_info.is_dir() or file_info.filename == "backup_info.json":
                         continue
                     
-                    # 创建目标目录
+                    
                     target_path = file_info.filename
                     target_dir = os.path.dirname(target_path)
                     
                     if target_dir and not os.path.exists(target_dir):
                         os.makedirs(target_dir, exist_ok=True)
                     
-                    # 如果文件已存在，创建备份（但不改变原文件名）
+                    
                     if os.path.exists(target_path):
                         backup_timestamp = datetime.datetime.now().strftime('%Y%m%d_%H%M%S')
                         backup_path = f"{target_path}.restore_backup_{backup_timestamp}"
                         shutil.copy2(target_path, backup_path)
                         backup_files.append(backup_path)
                     
-                    # 提取文件到正确的位置（覆盖原文件）
+                    
                     backup_zip.extract(file_info, ".")
                     extracted_files.append(target_path)
                 
                 success_text = "配置恢复成功！\n\n"
                 success_text += f"✅ 已恢复 {len(extracted_files)} 个文件：\n"
-                for file in extracted_files[:8]:  # 显示前8个文件
+                for file in extracted_files[:8]:  
                     success_text += f"- {file}\n"
                 
                 if len(extracted_files) > 8:
@@ -7432,7 +7432,7 @@ class MainWindow(QMainWindow):
                 
                 if backup_files:
                     success_text += f"\n💾 已备份 {len(backup_files)} 个原文件：\n"
-                    for backup_file in backup_files[:5]:  # 显示前5个备份文件
+                    for backup_file in backup_files[:5]:  
                         original_name = backup_file.split('.restore_backup_')[0]
                         success_text += f"- {original_name} → {os.path.basename(backup_file)}\n"
                     
@@ -7445,7 +7445,7 @@ class MainWindow(QMainWindow):
             self.show_error_message("恢复失败", f"恢复过程中发生错误：\n{str(e)}")
 
     def show_success_message(self, title, message):
-        """显示成功消息"""
+        
         msg_box = QMessageBox(self)
         msg_box.setIcon(QMessageBox.Information)
         msg_box.setWindowTitle(title)
@@ -7453,7 +7453,7 @@ class MainWindow(QMainWindow):
         msg_box.exec()
 
     def show_error_message(self, title, message):
-        """显示错误消息"""
+        
         msg_box = QMessageBox(self)
         msg_box.setIcon(QMessageBox.Critical)
         msg_box.setWindowTitle(title)
@@ -7686,7 +7686,7 @@ def main():
     app = QApplication(sys.argv)
     app.setStyle('Fusion')  
     
-    # 设置应用程序图标
+    
     icon_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "favicon.ico")
     if os.path.exists(icon_path):
         app.setWindowIcon(QIcon(icon_path))
