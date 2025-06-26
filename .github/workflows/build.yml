@@ -39,29 +39,39 @@ jobs:
       if: runner.os == 'Linux'
       run: |
         sudo apt-get update
-        sudo apt-get install -y libgl1-mesa-glx libxcb-cursor0
+        sudo apt-get install -y libgl1-mesa-glx libxcb-cursor0 xvfb
 
     # 步骤 6.4：安装 Python 依赖
     - name: 安装 Python 依赖 (Install Python dependencies)
       run: |
         python -m pip install --upgrade pip
         pip install -r requirements.txt
+        pip install pyinstaller
 
-    # 步骤 6.5：使用 PyInstaller 构建
+    # 步骤 6.5：使用 PyInstaller 构建 (Linux)
+    - name: 使用 PyInstaller 构建 Linux (Build with PyInstaller - Linux)
+      if: runner.os == 'Linux'
+      run: |
+        xvfb-run -a pyinstaller --noconfirm --onefile --windowed \
+          --name "WhiteCatToolbox-${{ matrix.os }}" \
+          wct.py
+
+    # 步骤 6.6：使用 PyInstaller 构建 (非Linux)
     - name: 使用 PyInstaller 构建 (Build with PyInstaller)
+      if: runner.os != 'Linux'
       run: |
         pyinstaller --noconfirm --onefile --windowed \
           --name "WhiteCatToolbox-${{ matrix.os }}" \
           wct.py
 
-    # 步骤 6.6：打包 macOS 应用
+    # 步骤 6.7：打包 macOS 应用
     - name: 打包 macOS 应用 (Package macOS app)
       if: runner.os == 'macOS'
       run: |
         cd dist
         zip -r WhiteCatToolbox-macOS.zip "WhiteCatToolbox-${{ matrix.os }}.app"
 
-    # 步骤 6.7：上传构建产物
+    # 步骤 6.8：上传构建产物
     - name: 上传构建产物 (Upload build artifact)
       uses: actions/upload-artifact@v4
       with:
