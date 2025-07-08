@@ -16,15 +16,15 @@ jobs:
           - os: windows-latest
             name: Windows
             ext: .exe
-            build_args: --onefile --windowed --icon=favicon.png --add-data "translations;translations" --add-data "language_config.json;." --add-data "favicon.png;."
+            build_args: --onefile --windowed --icon=favicon.png --add-data "translations;translations" --add-data "sitecustomize.py;." --add-data "wct_modules;wct_modules" --add-data "favicon.png;."
           - os: macos-latest  
             name: macOS
             ext: ""
-            build_args: --onefile --windowed --icon=favicon.png --add-data "translations:translations" --add-data "language_config.json:." --add-data "favicon.png:."
+            build_args: --onefile --windowed --icon=favicon.png --add-data "translations:translations" --add-data "sitecustomize.py:." --add-data "wct_modules:wct_modules" --add-data "favicon.png:."
           - os: ubuntu-latest
             name: Linux
             ext: ""
-            build_args: --onefile --windowed --icon=favicon.png --add-data "translations:translations" --add-data "language_config.json:." --add-data "favicon.png:."
+            build_args: --onefile --windowed --icon=favicon.png --add-data "translations:translations" --add-data "sitecustomize.py:." --add-data "wct_modules:wct_modules" --add-data "favicon.png:."
     
     runs-on: ${{ matrix.os }}
     
@@ -52,14 +52,21 @@ jobs:
         copy "dist\WhiteCatToolbox-${{ matrix.name }}${{ matrix.ext }}" release\
         copy README.md release\
         copy LICENSE release\
+        mkdir release\config
+        copy promotion\* release\config\
+        copy language_config.json release\config\
+        copy prompt.txt release\config\
     
     - name: Create release package (Unix)
       if: matrix.os != 'windows-latest'
       run: |
-        mkdir release
+        mkdir -p release/config
         cp "dist/WhiteCatToolbox-${{ matrix.name }}${{ matrix.ext }}" release/
         cp README.md release/
         cp LICENSE release/
+        cp -r promotion/* release/config/
+        cp language_config.json release/config/
+        cp prompt.txt release/config/
         chmod +x "release/WhiteCatToolbox-${{ matrix.name }}${{ matrix.ext }}"
     
     - name: Upload artifacts

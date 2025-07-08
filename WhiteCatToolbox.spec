@@ -9,8 +9,8 @@ a = Analysis(
     datas=[
         ('favicon.png', '.'),
         ('translations', 'translations'),
-        ('language_config.json', '.'),
         ('wct_modules', 'wct_modules'),
+        ('sitecustomize.py', '.'),
     ],
     hiddenimports=[
         'PySide6.QtCore',
