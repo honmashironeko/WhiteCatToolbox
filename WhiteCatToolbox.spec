@@ -8,7 +8,7 @@ a = Analysis(
     binaries=[],
     datas=[
         ('translations', 'translations'),
-        ('favicon.ico', '.'),
+        ('favicon.png', '.'),
         ('language_config.json', '.'),
         ('prompt.txt', '.'),
         ('sitecustomize.py', '.'),
@@ -66,5 +66,5 @@ exe = EXE(
     target_arch=None,
     codesign_identity=None,
     entitlements_file=None,
-    icon='favicon.ico',
+    icon='favicon.png',
 )
