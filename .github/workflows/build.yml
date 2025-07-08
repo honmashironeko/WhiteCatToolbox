@@ -1,31 +1,33 @@
-name: Build and Release
+name: Build Multi-Platform Executables
 
 on:
   push:
     tags:
       - 'v*'
   workflow_dispatch:
+  pull_request:
+    branches: [ main ]
 
 jobs:
   build:
-    runs-on: ${{ matrix.os }}
     strategy:
       matrix:
-        os: [ubuntu-latest, windows-latest, macos-latest]
         include:
-          - os: ubuntu-latest
-            os_name: linux
-            binary_name: WhiteCatToolbox
-            artifact_name: WhiteCatToolbox-linux-x64
           - os: windows-latest
-            os_name: windows
-            binary_name: WhiteCatToolbox.exe
-            artifact_name: WhiteCatToolbox-windows-x64
-          - os: macos-latest
-            os_name: macos
-            binary_name: WhiteCatToolbox
-            artifact_name: WhiteCatToolbox-macos-x64
-
+            name: Windows
+            ext: .exe
+            build_args: --onefile --windowed --icon=favicon.png --add-data "translations;translations" --add-data "language_config.json;." --add-data "favicon.png;."
+          - os: macos-latest  
+            name: macOS
+            ext: ""
+            build_args: --onefile --windowed --icon=favicon.png --add-data "translations:translations" --add-data "language_config.json:." --add-data "favicon.png:."
+          - os: ubuntu-latest
+            name: Linux
+            ext: ""
+            build_args: --onefile --windowed --icon=favicon.png --add-data "translations:translations" --add-data "language_config.json:." --add-data "favicon.png:."
+    
+    runs-on: ${{ matrix.os }}
+    
     steps:
     - uses: actions/checkout@v4
     
@@ -39,75 +41,40 @@ jobs:
         python -m pip install --upgrade pip
         pip install -r requirements.txt
     
-    - name: Build with PyInstaller (Windows)
+    - name: Build with PyInstaller
+      run: |
+        pyinstaller ${{ matrix.build_args }} --name=WhiteCatToolbox-${{ matrix.name }} main.py
+    
+    - name: Create release package (Windows)
       if: matrix.os == 'windows-latest'
       run: |
-        pyinstaller --onefile --windowed --name=${{ matrix.binary_name }} --icon=favicon.png --add-data="translations;translations" --add-data="favicon.png;." --add-data="language_config.json;." --add-data="prompt.txt;." --add-data="sitecustomize.py;." main.py
+        mkdir release
+        copy "dist\WhiteCatToolbox-${{ matrix.name }}${{ matrix.ext }}" release\
+        copy README.md release\
+        copy LICENSE release\
     
-    - name: Build with PyInstaller (Linux)
-      if: matrix.os == 'ubuntu-latest'
-      run: |
-        sudo apt-get update
-        sudo apt-get install -y libxcb-xinerama0 libxcb-cursor0 libxkbcommon-x11-0
-        pyinstaller --onefile --windowed --name=${{ matrix.binary_name }} --icon=favicon.png --add-data="translations:translations" --add-data="favicon.png:." --add-data="language_config.json:." --add-data="prompt.txt:." --add-data="sitecustomize.py:." main.py
-    
-    - name: Build with PyInstaller (macOS)
-      if: matrix.os == 'macos-latest'
-      run: |
-        pyinstaller --onefile --windowed --name=${{ matrix.binary_name }} --icon=favicon.png --add-data="translations:translations" --add-data="favicon.png:." --add-data="language_config.json:." --add-data="prompt.txt:." --add-data="sitecustomize.py:." main.py
-    
-    - name: Create package (Windows)
-      if: matrix.os == 'windows-latest'
-      run: |
-        mkdir package
-        copy dist\${{ matrix.binary_name }} package\
-        copy README.md package\
-        copy LICENSE package\
-        7z a -tzip ${{ matrix.artifact_name }}.zip package\*
-    
-    - name: Create package (Linux/macOS)
+    - name: Create release package (Unix)
       if: matrix.os != 'windows-latest'
       run: |
-        mkdir package
-        cp dist/${{ matrix.binary_name }} package/
-        cp README.md package/
-        cp LICENSE package/
-        tar -czf ${{ matrix.artifact_name }}.tar.gz -C package .
+        mkdir release
+        cp "dist/WhiteCatToolbox-${{ matrix.name }}${{ matrix.ext }}" release/
+        cp README.md release/
+        cp LICENSE release/
+        chmod +x "release/WhiteCatToolbox-${{ matrix.name }}${{ matrix.ext }}"
     
-    - name: Upload artifact (Windows)
-      if: matrix.os == 'windows-latest'
+    - name: Upload artifacts
       uses: actions/upload-artifact@v4
       with:
-        name: ${{ matrix.artifact_name }}
-        path: ${{ matrix.artifact_name }}.zip
-    
-    - name: Upload artifact (Linux/macOS)
-      if: matrix.os != 'windows-latest'
-      uses: actions/upload-artifact@v4
-      with:
-        name: ${{ matrix.artifact_name }}
-        path: ${{ matrix.artifact_name }}.tar.gz
-
-  release:
-    needs: build
-    runs-on: ubuntu-latest
-    if: startsWith(github.ref, 'refs/tags/')
-    
-    steps:
-    - name: Download all artifacts
-      uses: actions/download-artifact@v4
-      with:
-        path: artifacts
+        name: WhiteCatToolbox-${{ matrix.name }}
+        path: release/
+        retention-days: 30
     
     - name: Create Release
+      if: startsWith(github.ref, 'refs/tags/')
       uses: softprops/action-gh-release@v1
       with:
-        files: |
-          artifacts/WhiteCatToolbox-windows-x64/WhiteCatToolbox-windows-x64.zip
-          artifacts/WhiteCatToolbox-linux-x64/WhiteCatToolbox-linux-x64.tar.gz
-          artifacts/WhiteCatToolbox-macos-x64/WhiteCatToolbox-macos-x64.tar.gz
+        files: release/*
         draft: false
         prerelease: false
-        generate_release_notes: true
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
