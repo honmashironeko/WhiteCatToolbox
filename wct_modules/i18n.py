@@ -40,7 +40,7 @@ class I18nManager:
         
         return {
             "window": {
-                "title": "白猫工具箱-v0.0.3_beta",
+                "title": "白猫工具箱-v0.0.4_beta",
                 "tool_list": "工具列表",
                 "promotion": "推广"
             },
@@ -364,7 +364,7 @@ class I18nManager:
         
         return {
             "window": {
-                "title": "WhiteCat Toolbox-v0.0.3_beta",
+                "title": "WhiteCat Toolbox-v0.0.4_beta",
                 "tool_list": "Tool List",
                 "promotion": "Promotion"
             },
