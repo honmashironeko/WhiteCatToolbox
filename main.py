@@ -49,7 +49,7 @@ if __name__ == "__main__":
     app = QApplication(sys.argv)
     app.setStyle('Fusion')
 
-    icon_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "favicon.ico")
+    icon_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "favicon.png")
     if os.path.exists(icon_path):
         app.setWindowIcon(QIcon(icon_path))
 

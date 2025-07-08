@@ -37,7 +37,7 @@ class MainWindow(QMainWindow):
     def setup_ui(self):
         self.setWindowTitle(t("window.title"))
         self.setGeometry(0, 0, 1200, 800)
-        icon_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "favicon.ico")
+        icon_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "favicon.png")
         if os.path.exists(icon_path):
             self.setWindowIcon(QIcon(icon_path))
         self.setStyleSheet(get_main_window_style())
