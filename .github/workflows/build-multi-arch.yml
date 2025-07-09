@@ -1,0 +1,161 @@
+name: Build Multi-Architecture Executables
+
+on:
+  push:
+    tags:
+      - 'v*'
+  workflow_dispatch:
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  build:
+    strategy:
+      matrix:
+        include:
+          # Windows x64 (主流)
+          - os: windows-latest
+            name: Windows-x64
+            arch: x64
+            ext: .exe
+            build_args: --onefile --windowed --icon=config/favicon.png --add-data "translations;translations" --add-data "wct_modules;wct_modules" --add-data "config;config"
+          
+          # Windows x86 (32位兼容)
+          - os: windows-latest
+            name: Windows-x86
+            arch: x86
+            ext: .exe
+            build_args: --onefile --windowed --icon=config/favicon.png --add-data "translations;translations" --add-data "wct_modules;wct_modules" --add-data "config;config"
+          
+          # macOS Intel x64
+          - os: macos-13
+            name: macOS-x64
+            arch: x64
+            ext: ""
+            build_args: --onefile --windowed --icon=config/favicon.png --add-data "translations:translations" --add-data "wct_modules:wct_modules" --add-data "config:config"
+          
+          # macOS Apple Silicon ARM64
+          - os: macos-14
+            name: macOS-arm64
+            arch: arm64
+            ext: ""
+            build_args: --onefile --windowed --icon=config/favicon.png --add-data "translations:translations" --add-data "wct_modules:wct_modules" --add-data "config:config"
+          
+          # Linux x64 (主流)
+          - os: ubuntu-latest
+            name: Linux-x64
+            arch: x64
+            ext: ""
+            build_args: --onefile --windowed --icon=config/favicon.png --add-data "translations:translations" --add-data "wct_modules:wct_modules" --add-data "config:config"
+    
+    runs-on: ${{ matrix.os }}
+    
+    steps:
+    - uses: actions/checkout@v4
+    
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.11'
+        architecture: ${{ matrix.arch }}
+    
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install -r requirements.txt
+    
+    - name: Build with PyInstaller
+      run: |
+        pyinstaller ${{ matrix.build_args }} --name=WhiteCatToolbox-${{ matrix.name }} main.py
+    
+    - name: Create release package (Windows)
+      if: matrix.os == 'windows-latest'
+      run: |
+        mkdir release
+        copy "dist\WhiteCatToolbox-${{ matrix.name }}${{ matrix.ext }}" release\
+        copy README.md release\
+        copy LICENSE release\
+        mkdir release\tools
+        mkdir release\config
+        mkdir release\promotion
+        copy config\* release\config\
+        copy promotion\* release\promotion\
+    
+    - name: Create release package (Unix)
+      if: matrix.os != 'windows-latest'
+      run: |
+        mkdir -p release/tools
+        mkdir -p release/config
+        mkdir -p release/promotion
+        cp "dist/WhiteCatToolbox-${{ matrix.name }}${{ matrix.ext }}" release/
+        cp README.md release/
+        cp LICENSE release/
+        cp -r config/* release/config/
+        cp -r promotion/* release/promotion/
+        chmod +x "release/WhiteCatToolbox-${{ matrix.name }}${{ matrix.ext }}"
+    
+    - name: Upload artifacts
+      uses: actions/upload-artifact@v4
+      with:
+        name: WhiteCatToolbox-${{ matrix.name }}
+        path: release/
+        retention-days: 30
+    
+    - name: Create Release
+      if: startsWith(github.ref, 'refs/tags/')
+      uses: softprops/action-gh-release@v1
+      with:
+        files: release/*
+        draft: false
+        prerelease: false
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  # 单独的ARM64 Linux构建任务（实验性）
+  build-linux-arm64:
+    runs-on: ubuntu-latest
+    if: false  # 默认禁用，需要时启用
+    
+    steps:
+    - uses: actions/checkout@v4
+    
+    - name: Set up QEMU
+      uses: docker/setup-qemu-action@v3
+      with:
+        platforms: arm64
+    
+    - name: Build for Linux ARM64 using Docker
+      run: |
+        docker run --rm --platform linux/arm64 \
+          -v ${{ github.workspace }}:/workspace \
+          -w /workspace \
+          python:3.11-slim bash -c "
+            apt-get update && apt-get install -y gcc g++ && \
+            pip install --upgrade pip && \
+            pip install -r requirements.txt && \
+            pip install pyinstaller && \
+            pyinstaller --onefile --windowed --icon=config/favicon.png \
+              --add-data 'translations:translations' \
+              --add-data 'wct_modules:wct_modules' \
+              --add-data 'config:config' \
+              --name=WhiteCatToolbox-Linux-arm64 main.py
+          "
+    
+    - name: Create release package
+      run: |
+        mkdir -p release/tools
+        mkdir -p release/config  
+        mkdir -p release/promotion
+        cp "dist/WhiteCatToolbox-Linux-arm64" release/
+        cp README.md release/
+        cp LICENSE release/
+        cp -r config/* release/config/
+        cp -r promotion/* release/promotion/
+        chmod +x "release/WhiteCatToolbox-Linux-arm64"
+    
+    - name: Upload artifacts
+      uses: actions/upload-artifact@v4
+      with:
+        name: WhiteCatToolbox-Linux-arm64
+        path: release/
+        retention-days: 30
