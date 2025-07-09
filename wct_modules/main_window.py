@@ -37,7 +37,7 @@ class MainWindow(QMainWindow):
     def setup_ui(self):
         self.setWindowTitle(t("window.title"))
         self.setGeometry(0, 0, 1200, 800)
-        icon_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "favicon.png")
+        icon_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "config", "favicon.png")
         if os.path.exists(icon_path):
             self.setWindowIcon(QIcon(icon_path))
         self.setStyleSheet(get_main_window_style())
@@ -466,6 +466,15 @@ class MainWindow(QMainWindow):
                             full_file_path = os.path.join(root, file)
                             arcname = os.path.relpath(full_file_path, ".")
                             backup_zip.write(full_file_path, arcname)
+                # 备份config文件夹
+                config_dir = "config"
+                if os.path.exists(config_dir):
+                    for root, dirs, files in os.walk(config_dir):
+                        for file in files:
+                            full_file_path = os.path.join(root, file)
+                            arcname = os.path.relpath(full_file_path, ".")
+                            backup_zip.write(full_file_path, arcname)
+                            
                 if os.path.exists("promotion_config.json"):
                     backup_zip.write("promotion_config.json", "promotion_config.json")
                 if os.path.exists("command_history.json"):
@@ -490,6 +499,7 @@ class MainWindow(QMainWindow):
                     "includes": [
                         "templates/",
                         "promotion/",
+                        "config/",
                         "promotion_config.json",
                         "command_history.json", 
                         "tools/*/wct_config.txt",

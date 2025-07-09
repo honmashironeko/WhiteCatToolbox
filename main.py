@@ -39,7 +39,7 @@ if __name__ == "__main__":
         )
     try:
         import importlib
-        importlib.import_module("sitecustomize")
+        importlib.import_module("wct_modules.sitecustomize")
     except Exception:
         pass
 
@@ -49,7 +49,7 @@ if __name__ == "__main__":
     app = QApplication(sys.argv)
     app.setStyle('Fusion')
 
-    icon_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "favicon.png")
+    icon_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "config", "favicon.png")
     if os.path.exists(icon_path):
         app.setWindowIcon(QIcon(icon_path))
 
