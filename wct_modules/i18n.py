@@ -721,7 +721,7 @@ Thank you for using!"""
     def save_language_preference(self):
         
         try:
-            config_file = os.path.join(os.path.dirname(os.path.dirname(__file__)), "language_config.json")
+            config_file = os.path.join(os.path.dirname(os.path.dirname(__file__)), "config", "language_config.json")
             with open(config_file, 'w', encoding='utf-8') as f:
                 json.dump({"language": self.current_language}, f, ensure_ascii=False, indent=2)
         except Exception:
@@ -730,7 +730,7 @@ Thank you for using!"""
     def load_language_preference(self):
         
         try:
-            config_file = os.path.join(os.path.dirname(os.path.dirname(__file__)), "language_config.json")
+            config_file = os.path.join(os.path.dirname(os.path.dirname(__file__)), "config", "language_config.json")
             if os.path.exists(config_file):
                 with open(config_file, 'r', encoding='utf-8') as f:
                     config = json.load(f)

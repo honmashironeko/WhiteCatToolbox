@@ -20,13 +20,6 @@ jobs:
             ext: .exe
             build_args: --onefile --windowed --icon=config/favicon.png --add-data "translations;translations" --add-data "wct_modules;wct_modules" --add-data "config;config"
           
-          # Windows x86 (32位兼容)
-          - os: windows-latest
-            name: Windows-x86
-            arch: x86
-            ext: .exe
-            build_args: --onefile --windowed --icon=config/favicon.png --add-data "translations;translations" --add-data "wct_modules;wct_modules" --add-data "config;config"
-          
           # macOS Intel x64
           - os: macos-13
             name: macOS-x64
