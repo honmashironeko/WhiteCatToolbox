@@ -477,8 +477,9 @@ class MainWindow(QMainWindow):
                         backup_files.append(backup_path)
                     backup_zip.extract(file_info, ".")
                     extracted_files.append(target_path)
-                success_text = f"{t('restore_success_text').split('\n')[0]}\n\n"
-                success_text += f"✅ {t('restore_success_text').split('\n')[1].split(' ')[1]} {len(extracted_files)} {t('files_text')}:\n"
+                restore_text = t('restore_success_text').split('\n')
+                success_text = f"{restore_text[0]}\n\n"
+                success_text += f"✅ {restore_text[1].split(' ')[1]} {len(extracted_files)} {t('files_text')}:\n"
                 for file in extracted_files[:8]:  
                     success_text += f"- {file}\n"
                 if len(extracted_files) > 8:
