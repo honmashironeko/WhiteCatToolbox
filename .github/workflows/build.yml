@@ -48,6 +48,12 @@ jobs:
       with:
         python-version: ${{ matrix.python-version }}
 
+    - name: Install system dependencies (Linux)
+      if: matrix.platform == 'linux'
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y libbz2-dev libssl-dev libffi-dev
+
     - name: Set up QEMU (for cross-platform builds)
       if: matrix.platform == 'linux' && matrix.arch == 'arm64'
       uses: docker/setup-qemu-action@v3
@@ -57,29 +63,30 @@ jobs:
         python -m pip install --upgrade pip
         pip install -r requirements.txt
 
-    - name: Install PyInstaller
-      run: pip install pyinstaller
+    - name: Install PyInstaller and additional packages
+      run: |
+        pip install pyinstaller
+        pip install --upgrade setuptools wheel
 
     - name: Build with PyInstaller (Windows)
       if: matrix.platform == 'windows'
       run: |
-        pyinstaller --onefile --windowed --icon=favicon.ico --add-data "wct_modules;wct_modules" --name=WhiteCatToolbox main.py
+        pyinstaller --onefile --windowed --icon=favicon.ico --add-data "wct_modules;wct_modules" --hidden-import=ssl --hidden-import=bz2 --hidden-import=_ssl --name=WhiteCatToolbox main.py
 
     - name: Build with PyInstaller (macOS)
       if: matrix.platform == 'macos'
       run: |
-        pyinstaller --onefile --windowed --icon=favicon.ico --add-data "wct_modules:wct_modules" --name=WhiteCatToolbox main.py
+        pyinstaller --onefile --windowed --icon=favicon.ico --add-data "wct_modules:wct_modules" --hidden-import=ssl --hidden-import=bz2 --hidden-import=_ssl --name=WhiteCatToolbox main.py
 
     - name: Build with PyInstaller (Linux x64)
       if: matrix.platform == 'linux' && matrix.arch == 'x64'
       run: |
-        pyinstaller --onefile --icon=favicon.ico --add-data "wct_modules:wct_modules" --name=WhiteCatToolbox main.py
+        pyinstaller --onefile --icon=favicon.ico --add-data "wct_modules:wct_modules" --hidden-import=ssl --hidden-import=bz2 --hidden-import=_ssl --name=WhiteCatToolbox main.py
 
     - name: Build with PyInstaller (Linux arm64)
       if: matrix.platform == 'linux' && matrix.arch == 'arm64'
       run: |
-        # Use cross-compilation or native arm64 runner when available
-        pyinstaller --onefile --icon=favicon.ico --add-data "wct_modules:wct_modules" --name=WhiteCatToolbox main.py
+        pyinstaller --onefile --icon=favicon.ico --add-data "wct_modules:wct_modules" --hidden-import=ssl --hidden-import=bz2 --hidden-import=_ssl --name=WhiteCatToolbox main.py
 
     - name: Prepare package directory
       run: |
@@ -104,20 +111,27 @@ jobs:
     - name: Create archive (Windows)
       if: matrix.platform == 'windows'
       run: |
-        7z a WhiteCatToolbox-${{ matrix.platform }}-${{ matrix.arch }}.zip ./package/*
+        cd package
+        7z a ../WhiteCatToolbox-${{ matrix.platform }}-${{ matrix.arch }}.zip *
 
     - name: Create archive (macOS/Linux)
       if: matrix.platform != 'windows'
       run: |
         tar -czf WhiteCatToolbox-${{ matrix.platform }}-${{ matrix.arch }}.tar.gz -C package .
 
-    - name: Upload artifacts
+    - name: Upload artifacts (Windows)
+      if: matrix.platform == 'windows'
       uses: actions/upload-artifact@v4
       with:
         name: WhiteCatToolbox-${{ matrix.platform }}-${{ matrix.arch }}
-        path: |
-          WhiteCatToolbox-${{ matrix.platform }}-${{ matrix.arch }}.zip
-          WhiteCatToolbox-${{ matrix.platform }}-${{ matrix.arch }}.tar.gz
+        path: WhiteCatToolbox-${{ matrix.platform }}-${{ matrix.arch }}.zip
+
+    - name: Upload artifacts (macOS/Linux)
+      if: matrix.platform != 'windows'
+      uses: actions/upload-artifact@v4
+      with:
+        name: WhiteCatToolbox-${{ matrix.platform }}-${{ matrix.arch }}
+        path: WhiteCatToolbox-${{ matrix.platform }}-${{ matrix.arch }}.tar.gz
 
   release:
     needs: build
