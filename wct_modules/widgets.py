@@ -13,7 +13,7 @@ class ClickableLabel(QLabel):
         self.setFont(QFont(fonts["system"], s(8), QFont.Bold))
         self.setCursor(Qt.PointingHandCursor)
         self.setWordWrap(True)  
-        self.setAlignment(Qt.AlignLeft | Qt.AlignVCenter)  
+        self.setAlignment(Qt.AlignCenter)  
         self.update_style()
     
     def mousePressEvent(self, event):

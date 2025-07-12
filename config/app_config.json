@@ -1,0 +1,10 @@
+{
+    "ui_settings": {
+        "scale_factor": 1.5,
+        "theme": "default",
+        "language": "zh_CN"
+    },
+    "tool_history": {
+        "sqlmap-master": ""
+    }
+}

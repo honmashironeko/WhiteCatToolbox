@@ -4,7 +4,10 @@ from .utils import s
 def get_cross_platform_app_stylesheet():
     
     return f"""
-        /* 修复QMessageBox黑框问题 */
+        
+        {get_modern_combobox_style()}
+        
+        
         QMessageBox {{
             background-color: {colors["white"]};
             border: 1px solid {colors["border"]};
@@ -39,19 +42,21 @@ def get_cross_platform_app_stylesheet():
         }}
         QMessageBox QPushButton[text="取消"], 
         QMessageBox QPushButton[text="Cancel"],
-        QMessageBox QPushButton[text="No"] {{
+        QMessageBox QPushButton[text="No"],
+        QMessageBox QPushButton[text="否"] {{
             background-color: {colors["background_light"]};
             color: {colors["primary"]};
             border: 1px solid {colors["border_light"]};
         }}
         QMessageBox QPushButton[text="取消"]:hover,
         QMessageBox QPushButton[text="Cancel"]:hover,
-        QMessageBox QPushButton[text="No"]:hover {{
+        QMessageBox QPushButton[text="No"]:hover,
+        QMessageBox QPushButton[text="否"]:hover {{
             background-color: {colors["border"]};
             border-color: {colors["primary"]};
         }}
         
-        /* 修复QInputDialog黑框问题 */
+        
         QInputDialog {{
             background-color: {colors["white"]};
             border: 1px solid {colors["border"]};
@@ -110,7 +115,7 @@ def get_cross_platform_app_stylesheet():
             border-color: {colors["primary"]};
         }}
         
-        /* 修复QFileDialog黑框问题 */
+        
         QFileDialog {{
             background-color: {colors["white"]};
             color: {colors["text"]};
@@ -147,7 +152,7 @@ def get_cross_platform_app_stylesheet():
             border: 1px solid {colors["border_light"]};
         }}
         
-        /* 垂直滚动条样式 */
+        
         QScrollBar:vertical {{
             background: qlineargradient(x1: 0, y1: 0, x2: 1, y2: 0,
                                       stop: 0 {colors["scrollbar_background_start"]}, stop: 1 {colors["scrollbar_background_end"]});
@@ -179,7 +184,7 @@ def get_cross_platform_app_stylesheet():
             background: none;
         }}
         
-        /* 水平滚动条样式 */
+        
         QScrollBar:horizontal {{
             height: {s(12)}px;
             background: qlineargradient(x1: 0, y1: 0, x2: 0, y2: 1,
@@ -212,7 +217,7 @@ def get_cross_platform_app_stylesheet():
             background: none;
         }}
         
-        /* 滚动区域样式 */
+        
         QScrollArea {{
             background-color: transparent;
             border: none;
@@ -221,34 +226,21 @@ def get_cross_platform_app_stylesheet():
             background-color: transparent;
         }}
         
-        /* 工具提示样式 - 高优先级确保一致性 */
+        
         QToolTip {{
             background: qlineargradient(x1: 0, y1: 0, x2: 0, y2: 1,
-                                      stop: 0 {colors["tooltip_background_start"]}, stop: 1 {colors["tooltip_background_end"]}) !important;
-            color: {colors["tooltip_text"]} !important;
-            border: {s(2)}px solid {colors["tooltip_border"]} !important;
-            border-radius: {params["border_radius_small"]} !important;
-            padding: {s(6)}px {s(10)}px !important;
-            font-size: {fonts["tooltip_size"]} !important;
-            font-family: '{fonts["system"]}', Arial, sans-serif !important;
-            font-weight: 500 !important;
-            line-height: 1.2 !important;
-            max-width: {s(400)}px !important;
-        }}
-        
-        /* 确保所有组件的工具提示都使用统一样式 */
-        * QToolTip {{
-            background: qlineargradient(x1: 0, y1: 0, x2: 0, y2: 1,
-                                      stop: 0 {colors["tooltip_background_start"]}, stop: 1 {colors["tooltip_background_end"]}) !important;
-            color: {colors["tooltip_text"]} !important;
-            border: {s(2)}px solid {colors["tooltip_border"]} !important;
-            border-radius: {params["border_radius_small"]} !important;
-            padding: {s(6)}px {s(10)}px !important;
-            font-size: {fonts["tooltip_size"]} !important;
-            font-family: '{fonts["system"]}', Arial, sans-serif !important;
-            font-weight: 500 !important;
-            line-height: 1.2 !important;
-            max-width: {s(400)}px !important;
+                                      stop: 0 {colors["tooltip_background_start"]}, stop: 1 {colors["tooltip_background_end"]});
+            color: {colors["tooltip_text"]};
+            border: {s(2)}px solid {colors["tooltip_border"]};
+            border-radius: {params["border_radius_small"]};
+            padding: {s(6)}px {s(10)}px;
+            font-size: {fonts["tooltip_size"]};
+            font-family: '{fonts["system"]}', Arial, sans-serif;
+            font-weight: 500;
+            line-height: 1.3;
+            max-width: {s(450)}px;
+            word-wrap: break-word;
+            white-space: pre-wrap;
         }}
     """ 
 
@@ -286,26 +278,46 @@ def get_modern_qmenu_stylesheet():
     
     return f"""
         QMenu {{
-            background-color: {colors["menu_background"]};
-            border: 1px solid {colors["menu_border"]};
-            border-radius: {params["border_radius_small"]};
-            padding: {s(4)}px;
+            background-color: {colors["white"]};
+            border: 1px solid {colors["border_light"]};
+            border-radius: {s(8)}px;
+            padding: {s(6)}px;
             color: {colors["text"]};
-            font-size: {fonts["menu_size"]};
+            font-size: {s(10)}pt;
+            font-family: '{fonts["system"]}', Arial, sans-serif;
+            min-width: {s(180)}px;
         }}
         QMenu::item {{
-            padding: {s(8)}px {s(16)}px;
+            padding: {s(10)}px {s(18)}px;
             background-color: transparent;
-            border-radius: {params["border_radius_very_small"]};
+            border-radius: {s(6)}px;
+            margin: {s(2)}px {s(4)}px;
+            font-weight: 500;
+            min-height: {s(24)}px;
+            color: {colors["text"]};
         }}
         QMenu::item:selected {{
-            background-color: {colors["menu_item_selected_background"]};
-            color: {colors["menu_item_selected_text"]};
+            background-color: {colors["secondary"]};
+            color: {colors["text_on_primary"]};
+            font-weight: 600;
+        }}
+        QMenu::item:pressed {{
+            background-color: {colors["secondary_hover"]};
+        }}
+        QMenu::item:disabled {{
+            color: {colors["text_disabled"]};
+            background-color: transparent;
         }}
         QMenu::separator {{
-            height: 1px;
-            background-color: {colors["menu_separator"]};
-            margin: {s(4)}px {s(8)}px;
+            height: {s(1)}px;
+            background-color: {colors["border_light"]};
+            margin: {s(6)}px {s(12)}px;
+            border: none;
+        }}
+        QMenu::icon {{
+            padding-left: {s(8)}px;
+            width: {s(16)}px;
+            height: {s(16)}px;
         }}
     """
 
@@ -325,25 +337,21 @@ def get_splitter_style():
     return f"""
         QSplitter::handle {{
             background-color: {colors["splitter_handle"]};
-            width: 3px;
+            width: 8px;
             margin: 2px 0;
-            border-radius: 1px;
-            border: 1px solid {colors["border_light"]};
+            border-radius: 4px;
+            border: 1px solid {colors["border"]};
         }}
         QSplitter::handle:hover {{
             background-color: {colors["splitter_handle_hover"]};
-            border-color: {colors["splitter_handle_hover"]};
+            border-color: {colors["primary"]};
+            width: 10px;
         }}
         QSplitter::handle:vertical {{
-            background-color: {colors["splitter_handle"]};
             height: 1px;
             margin: 0 2px;
-            border-radius: 1px;
-            border: 1px solid {colors["border_light"]};
-        }}
-        QSplitter::handle:vertical:hover {{
-            background-color: {colors["splitter_handle_hover"]};
-            border-color: {colors["splitter_handle_hover"]};
+            border-radius: 4px;
+            border: 1px solid {colors["border"]};
         }}
     """
 
@@ -458,7 +466,7 @@ def get_clickable_label_style(checked, is_required):
                     border-radius: {params["border_radius_very_small"]};
                     padding: 8px 12px;
                     color: {colors["white"]};
-                    font-weight: 600;
+                    font-weight: bold;
                     min-height: 20px;
                 }}
                 QLabel:hover {{
@@ -476,7 +484,7 @@ def get_clickable_label_style(checked, is_required):
                     border-radius: {params["border_radius_very_small"]};
                     padding: 8px 12px;
                     color: {colors["white"]};
-                    font-weight: 600;
+                    font-weight: bold;
                     min-height: 20px;
                 }}
             """
@@ -491,7 +499,7 @@ def get_clickable_label_style(checked, is_required):
                     border-radius: {params["border_radius_very_small"]};
                     padding: 8px 12px;
                     color: {colors["text_on_danger"]};
-                    font-weight: 600;
+                    font-weight: bold;
                     min-height: 20px;
                 }}
                 QLabel:hover {{
@@ -510,7 +518,7 @@ def get_clickable_label_style(checked, is_required):
                     border-radius: {params["border_radius_very_small"]};
                     padding: 8px 12px;
                     color: {colors["text_secondary"]};
-                    font-weight: 500;
+                    font-weight: bold;
                     min-height: 20px;
                 }}
                 QLabel:hover {{
@@ -627,3 +635,188 @@ def get_sponsor_item_style():
             background-color: {colors["background_gray"]};
         }}
     """ 
+
+def get_parameter_section_style():
+    
+    return f"""
+        QGroupBox {{
+            border: 1px solid {colors["border"]};
+            border-radius: {params["border_radius_small"]};
+            margin-top: {s(10)}px;
+            background-color: {colors["white"]};
+            padding-top: {s(10)}px;
+        }}
+        QGroupBox::title {{
+            subcontrol-origin: margin;
+            subcontrol-position: top center;
+            padding: {s(4)}px {s(10)}px;
+            background-color: {colors["secondary"]};
+            color: {colors["text_on_primary"]};
+            border-radius: {params["border_radius_very_small"]};
+            font-weight: 600;
+        }}
+    """
+
+def get_parameter_search_style():
+    
+    return f"""
+        QLineEdit {{
+            border: 1px solid {colors["border_light"]};
+            border-radius: {params["border_radius_very_small"]};
+            padding: {s(6)}px {s(12)}px;
+            background-color: {colors["background_very_light"]};
+            font-size: {s(9)}pt;
+            color: {colors["text"]};
+        }}
+        QLineEdit:focus {{
+            border: 2px solid {colors["secondary"]};
+            background-color: {colors["white"]};
+            outline: none;
+        }}
+        QLineEdit:hover {{
+            border-color: {colors["border"]};
+            background-color: {colors["background_light"]};
+        }}
+    """
+
+def get_modern_combobox_style():
+    """
+    通用的现代化下拉框样式 - 优化版本，移除多余边框
+    Modern and elegant dropdown/combobox styling with clean borders
+    """
+    return f"""
+        QComboBox {{
+            background: qlineargradient(x1: 0, y1: 0, x2: 0, y2: 1,
+                                      stop: 0 {colors["white"]}, 
+                                      stop: 1 {colors["background_very_light"]});
+            border: 1px solid {colors["border_light"]};
+            border-radius: {params["border_radius_small"]};
+            padding: {s(6)}px {s(12)}px;
+            padding-right: {s(25)}px;
+            color: {colors["text"]};
+            font-size: {fonts["default_size"]};
+            font-family: '{fonts["system"]}', Arial, sans-serif;
+            font-weight: 500;
+            min-height: {s(20)}px;
+            selection-background-color: {colors["secondary"]};
+            selection-color: {colors["text_on_primary"]};
+        }}
+        
+        QComboBox:hover {{
+            background: qlineargradient(x1: 0, y1: 0, x2: 0, y2: 1,
+                                      stop: 0 {colors["background_light"]}, 
+                                      stop: 1 {colors["background_very_light"]});
+            border-color: {colors["secondary"]};
+        }}
+        
+        QComboBox:focus {{
+            border: 1px solid {colors["secondary"]};
+            background: qlineargradient(x1: 0, y1: 0, x2: 0, y2: 1,
+                                      stop: 0 {colors["white"]}, 
+                                      stop: 1 {colors["background_light"]});
+            outline: none;
+        }}
+        
+        QComboBox:pressed {{
+            background: qlineargradient(x1: 0, y1: 0, x2: 0, y2: 1,
+                                      stop: 0 {colors["background_light"]}, 
+                                      stop: 1 {colors["background_gray"]});
+            border-color: {colors["secondary_pressed"]};
+        }}
+        
+        QComboBox:disabled {{
+            background-color: {colors["background_gray"]};
+            color: {colors["text_disabled"]};
+            border-color: {colors["background_gray"]};
+        }}
+        
+        QComboBox::drop-down {{
+            subcontrol-origin: padding;
+            subcontrol-position: top right;
+            width: {s(20)}px;
+            border: none;
+            border-left: 1px solid {colors["border_light"]};
+            border-top-right-radius: {params["border_radius_small"]};
+            border-bottom-right-radius: {params["border_radius_small"]};
+            background: transparent;
+        }}
+        
+        QComboBox::drop-down:hover {{
+            background: qlineargradient(x1: 0, y1: 0, x2: 0, y2: 1,
+                                      stop: 0 {colors["secondary"]}, 
+                                      stop: 1 {colors["secondary_hover"]});
+            border-left-color: {colors["secondary"]};
+        }}
+        
+        QComboBox::down-arrow {{
+            image: url(data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMTIiIGhlaWdodD0iOCIgdmlld0JveD0iMCAwIDEyIDgiIGZpbGw9Im5vbmUiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+PHBhdGggZD0iTTEgMUw2IDdMMTEgMSIgc3Ryb2tlPSIjNmM3NTdkIiBzdHJva2Utd2lkdGg9IjIiIHN0cm9rZS1saW5lY2FwPSJyb3VuZCIgc3Ryb2tlLWxpbmVqb2luPSJyb3VuZCIvPjwvc3ZnPg==);
+            width: {s(12)}px;
+            height: {s(8)}px;
+        }}
+        
+        QComboBox::down-arrow:hover {{
+            image: url(data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMTIiIGhlaWdodD0iOCIgdmlld0JveD0iMCAwIDEyIDgiIGZpbGw9Im5vbmUiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+PHBhdGggZD0iTTEgMUw2IDdMMTEgMSIgc3Ryb2tlPSIjZmZmZmZmIiBzdHJva2Utd2lkdGg9IjIiIHN0cm9rZS1saW5lY2FwPSJyb3VuZCIgc3Ryb2tlLWxpbmVqb2luPSJyb3VuZCIvPjwvc3ZnPg==);
+        }}
+        
+        QComboBox::down-arrow:pressed {{
+            top: 1px;
+            left: 1px;
+        }}
+        
+        
+        QComboBox QAbstractItemView {{
+            border: 0px;
+            outline: 0px;
+            background: {colors["white"]};
+            border-radius: {params["border_radius_small"]};
+            padding: 0px;
+            margin: 0px;
+            color: {colors["text"]};
+            selection-background-color: transparent;
+            alternate-background-color: transparent;
+            show-decoration-selected: 0;
+            gridline-color: transparent;
+        }}
+        
+        QComboBox QAbstractItemView::item {{
+            background: transparent;
+            border: none;
+            border-radius: {params["border_radius_very_small"]};
+            padding: {s(6)}px {s(10)}px;
+            margin: {s(1)}px {s(2)}px;
+            color: {colors["text"]};
+            font-weight: 500;
+            min-height: {s(16)}px;
+        }}
+        
+        QComboBox QAbstractItemView::item:hover {{
+            background: {colors["list_item_hover_background"]};
+            color: {colors["list_item_hover_text"]};
+        }}
+        
+        QComboBox QAbstractItemView::item:selected {{
+            background: {colors["secondary"]};
+            color: {colors["text_on_primary"]};
+            font-weight: 600;
+        }}
+        
+        
+        QComboBox QAbstractItemView QScrollBar:vertical {{
+            background: {colors["background_light"]};
+            width: {s(6)}px;
+            border-radius: {s(3)}px;
+            margin: {s(1)}px;
+            border: none;
+        }}
+        
+        QComboBox QAbstractItemView QScrollBar::handle:vertical {{
+            background: {colors["scrollbar_handle_start"]};
+            border-radius: {s(3)}px;
+            min-height: {s(15)}px;
+            border: none;
+        }}
+        
+        QComboBox QAbstractItemView QScrollBar::handle:vertical:hover {{
+            background: {colors["scrollbar_handle_hover_start"]};
+        }}
+    """

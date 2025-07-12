@@ -1,8 +1,8 @@
 import os
 import platform
 import json
-from .i18n import t
 import shlex
+from .i18n import t
 
 def get_system_font():
     
@@ -71,7 +71,7 @@ def build_cross_platform_command(tool_path, user_command, params):
         
         return command
     else:
-        raise ValueError(t("messages.parse_command_error"))
+        raise ValueError(t("unable_to_parse_command"))
 
 def setup_workspace_path():
     
@@ -93,13 +93,18 @@ def load_scale_factor():
     
     global SCALE_FACTOR
     try:
-        with open("ui_scale_config.json", "r") as f:
-            config = json.load(f)
-            factor = config.get("scale_factor", 1.0)
-            if isinstance(factor, (int, float)) and factor > 0:
-                SCALE_FACTOR = float(factor)
-            else:
-                SCALE_FACTOR = 1.0
+        if os.path.exists("config/app_config.json"):
+            with open("config/app_config.json", "r") as f:
+                config = json.load(f)
+                ui_settings = config.get("ui_settings", {})
+                factor = ui_settings.get("scale_factor", 1.0)
+        else:
+            factor = 1.0
+            
+        if isinstance(factor, (int, float)) and factor > 0:
+            SCALE_FACTOR = float(factor)
+        else:
+            SCALE_FACTOR = 1.0
     except (FileNotFoundError, json.JSONDecodeError):
         SCALE_FACTOR = 1.0
     return SCALE_FACTOR
@@ -109,8 +114,19 @@ def save_scale_factor(factor):
     global SCALE_FACTOR
     if isinstance(factor, (int, float)) and factor > 0:
         SCALE_FACTOR = float(factor)
-        with open("ui_scale_config.json", "w") as f:
-            json.dump({"scale_factor": SCALE_FACTOR}, f, indent=4)
+        config = {}
+        if os.path.exists("config/app_config.json"):
+            try:
+                with open("config/app_config.json", "r") as f:
+                    config = json.load(f)
+            except:
+                config = {}
+        if "ui_settings" not in config:
+            config["ui_settings"] = {}
+        config["ui_settings"]["scale_factor"] = SCALE_FACTOR
+        os.makedirs("config", exist_ok=True)
+        with open("config/app_config.json", "w") as f:
+            json.dump(config, f, indent=4, ensure_ascii=False)
 
 def s(value):
     

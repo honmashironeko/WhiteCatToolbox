@@ -1,31 +1,7 @@
 #!/usr/bin/env python3
-
 if __name__ == "__main__":
     import sys
     import os
-    import locale
-    import platform
-    os.environ['PYTHONIOENCODING'] = 'utf-8'
-    if platform.system() == "Windows":
-        os.environ['PYTHONUTF8'] = '1'
-        os.environ['PYTHONIOENCODING'] = 'utf-8:surrogateescape'
-
-        try:
-            import subprocess
-            subprocess.run(['chcp', '65001'], shell=True, capture_output=True)
-        except:
-            pass
-    try:
-        locale.setlocale(locale.LC_ALL, 'zh_CN.UTF-8')
-    except locale.Error:
-        try:
-            locale.setlocale(locale.LC_ALL, 'C.UTF-8')
-        except locale.Error:
-            pass
-    
-    os.environ['LANG'] = 'zh_CN.UTF-8'
-    os.environ['LC_ALL'] = 'zh_CN.UTF-8'
-    
     from wct_modules import utils
     utils.load_scale_factor()
     from PySide6.QtWidgets import QApplication
@@ -39,7 +15,7 @@ if __name__ == "__main__":
         )
     try:
         import importlib
-        importlib.import_module("wct_modules.sitecustomize")
+        importlib.import_module("sitecustomize")
     except Exception:
         pass
 
@@ -49,7 +25,7 @@ if __name__ == "__main__":
     app = QApplication(sys.argv)
     app.setStyle('Fusion')
 
-    icon_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "config", "favicon.png")
+    icon_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "favicon.ico")
     if os.path.exists(icon_path):
         app.setWindowIcon(QIcon(icon_path))
 

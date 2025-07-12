@@ -11,10 +11,10 @@ from PySide6.QtWidgets import (
 from PySide6.QtCore import Qt, QTimer
 from PySide6.QtGui import QFont, QIcon, QColor
 from .utils import get_system_font, get_system_font_css, s
-from .i18n import t
 from .widgets import ClickableLabel
 from .styles import get_modern_qmenu_stylesheet
 from .theme import colors
+from .i18n import t
 
 class TemplateManager(QDialog):
     def __init__(self, tool_name, parent=None):
@@ -27,7 +27,7 @@ class TemplateManager(QDialog):
         self.setup_global_styles()
 
     def setup_ui(self):
-        self.setWindowTitle(t("templates.manager_title"))
+        self.setWindowTitle(t("template_management"))
         self.setGeometry(s(150), s(150), s(900), s(600))
         self.setModal(True)
         
@@ -59,7 +59,7 @@ class TemplateManager(QDialog):
         header_layout = QHBoxLayout()
         header_layout.setSpacing(s(16))
         
-        title_label = QLabel(t("templates.manager_title"))
+        title_label = QLabel(t("template_management_header"))
         title_label.setFont(QFont(get_system_font(), s(18), QFont.Bold))
         title_label.setStyleSheet(f"""
             QLabel {{
@@ -74,8 +74,9 @@ class TemplateManager(QDialog):
         
         header_layout.addStretch()
         
-        add_btn = QPushButton(t("templates.add_template"))
-        add_btn.setMinimumSize(s(110), s(38))
+        add_btn = QPushButton(t("add_template"))
+        add_btn.setMinimumSize(s(120), s(38))
+        add_btn.setSizePolicy(QSizePolicy.Preferred, QSizePolicy.Fixed)
         add_btn.setCursor(Qt.PointingHandCursor)
         add_btn.setStyleSheet(f"""
             QPushButton {{
@@ -107,7 +108,7 @@ class TemplateManager(QDialog):
         
         self.template_table = QTableWidget()
         self.template_table.setColumnCount(3)
-        self.template_table.setHorizontalHeaderLabels([t("templates.template_name"), t("templates.template_remark"), t("templates.operation")])
+        self.template_table.setHorizontalHeaderLabels([t("template_name"), t("template_remark"), t("operation")])
         
         self.template_table.setStyleSheet(f"""
             QTableWidget {{
@@ -136,7 +137,7 @@ class TemplateManager(QDialog):
                 background-color: rgba(74, 144, 226, 0.1);
                 border-radius: {s(6)}px;
             }}
-            /* Ensure button container is not affected by table style */
+            
             QTableWidget QWidget {{
                 background: transparent;
                 border: none;
@@ -180,11 +181,10 @@ class TemplateManager(QDialog):
         self.template_table.verticalHeader().setDefaultSectionSize(s(76))
         
         header = self.template_table.horizontalHeader()
-        header.setSectionResizeMode(0, QHeaderView.Fixed)             
+        header.setSectionResizeMode(0, QHeaderView.ResizeToContents)             
         header.setSectionResizeMode(1, QHeaderView.Stretch)           
-        header.setSectionResizeMode(2, QHeaderView.Fixed)             
-        header.resizeSection(0, s(200))
-        header.resizeSection(2, s(150))
+        header.setSectionResizeMode(2, QHeaderView.ResizeToContents)             
+
         
         card_layout.addWidget(self.template_table)
         
@@ -194,8 +194,9 @@ class TemplateManager(QDialog):
         bottom_layout = QHBoxLayout()
         bottom_layout.setSpacing(s(12))
         
-        import_btn = QPushButton(t("templates.import_template"))
-        import_btn.setMinimumSize(s(110), s(38))
+        import_btn = QPushButton(t("import_template"))
+        import_btn.setMinimumSize(s(120), s(38))
+        import_btn.setSizePolicy(QSizePolicy.Preferred, QSizePolicy.Fixed)
         import_btn.setCursor(Qt.PointingHandCursor)
         import_btn.setStyleSheet(f"""
             QPushButton {{
@@ -224,8 +225,9 @@ class TemplateManager(QDialog):
         import_btn.clicked.connect(self.import_template)
         bottom_layout.addWidget(import_btn)
 
-        export_btn = QPushButton(t("templates.export_template"))
-        export_btn.setMinimumSize(s(110), s(38))
+        export_btn = QPushButton(t("export_template"))
+        export_btn.setMinimumSize(s(120), s(38))
+        export_btn.setSizePolicy(QSizePolicy.Preferred, QSizePolicy.Fixed)
         export_btn.setCursor(Qt.PointingHandCursor)
         export_btn.setStyleSheet(import_btn.styleSheet())
         export_btn.clicked.connect(self.export_template)
@@ -233,8 +235,8 @@ class TemplateManager(QDialog):
 
         bottom_layout.addStretch()
 
-        close_btn = QPushButton(t("buttons.close"))
-        close_btn.setMinimumSize(s(80), s(38))
+        close_btn = QPushButton(t("close"))
+        close_btn.setMinimumSize(s(90), s(38))
         close_btn.setCursor(Qt.PointingHandCursor)
         close_btn.setStyleSheet(f"""
             QPushButton {{
@@ -276,7 +278,7 @@ class TemplateManager(QDialog):
         except (FileNotFoundError, json.JSONDecodeError):
             return {}
         except Exception as e:
-            print(f"Load template failed: {e}")
+            print(t("load_template_failed").format(e=e))
             return {}
 
     def save_templates(self):
@@ -287,8 +289,8 @@ class TemplateManager(QDialog):
             with open(template_file, "w", encoding="utf-8") as f:
                 json.dump(self.templates, f, ensure_ascii=False, indent=2)
         except Exception as e:
-            print(f"Save template failed: {e}")
-            self.parent_page.show_custom_message(t("messages.error"), t("templates.save_template_error") + f": {e}")
+            print(t("save_template_failed").format(e=e))
+            self.parent_page.show_custom_message(t("error"), t("save_template_failed").format(e=e))
 
     def load_template_list(self):
         self.template_table.setRowCount(0)
@@ -302,22 +304,22 @@ class TemplateManager(QDialog):
         row_position = self.template_table.rowCount()
         self.template_table.insertRow(row_position)
         
-        name_text = template_data.get('name', t('labels.unnamed_template'))
+        name_text = template_data.get('name', t("unnamed_template"))
         name_item = QTableWidgetItem(name_text)
         name_item.setFont(QFont(get_system_font(), s(12), QFont.Bold))
         name_item.setTextAlignment(Qt.AlignLeft | Qt.AlignVCenter)
         name_item.setForeground(QColor("#2c3e50"))
-        name_item.setToolTip(t("tooltips.template_name"))
+        name_item.setToolTip(t("edit_template_name_tooltip"))
         name_item.setData(Qt.UserRole, template_id)
         self.template_table.setItem(row_position, 0, name_item)
         
-        remark_text = template_data.get('remark', t('labels.no_remark'))
+        remark_text = template_data.get('remark', t("no_remark"))
         if not remark_text.strip():
-            remark_text = t('labels.no_remark')
+            remark_text = t("no_remark")
         remark_item = QTableWidgetItem(remark_text)
         remark_item.setFont(QFont(get_system_font(), s(11), QFont.Normal))
         remark_item.setForeground(QColor("#8e8e93"))
-        remark_item.setToolTip(t("tooltips.template_remark"))
+        remark_item.setToolTip(t("edit_template_remark_tooltip"))
         self.template_table.setItem(row_position, 1, remark_item)
         
         button_widget = self.create_button_widget(template_id)
@@ -326,12 +328,13 @@ class TemplateManager(QDialog):
     def create_button_widget(self, template_id):
         widget = QWidget()
         button_layout = QHBoxLayout()
-        button_layout.setContentsMargins(s(6), s(8), s(6), s(8))
-        button_layout.setSpacing(s(6))
+        button_layout.setContentsMargins(s(8), s(8), s(8), s(8))
+        button_layout.setSpacing(s(8))
         button_layout.setAlignment(Qt.AlignCenter)
 
-        apply_btn = QPushButton(t("templates.apply"))
-        apply_btn.setMinimumSize(s(58), s(28))
+        apply_btn = QPushButton(t("apply"))
+        apply_btn.setMinimumSize(s(70), s(28))
+        apply_btn.setSizePolicy(QSizePolicy.Preferred, QSizePolicy.Fixed)
         apply_btn.setCursor(Qt.PointingHandCursor)
         apply_btn.setStyleSheet(f"""
             QPushButton {{
@@ -347,8 +350,9 @@ class TemplateManager(QDialog):
         apply_btn.clicked.connect(lambda: self.apply_template_by_id(template_id))
         button_layout.addWidget(apply_btn)
         
-        delete_btn = QPushButton(t("templates.delete"))
-        delete_btn.setMinimumSize(s(58), s(28))
+        delete_btn = QPushButton(t("delete"))
+        delete_btn.setMinimumSize(s(70), s(28))
+        delete_btn.setSizePolicy(QSizePolicy.Preferred, QSizePolicy.Fixed)
         delete_btn.setCursor(Qt.PointingHandCursor)
         delete_btn.setStyleSheet(f"""
             QPushButton {{
@@ -387,21 +391,22 @@ class TemplateManager(QDialog):
 
     def save_current_params(self):
         if not self.parent_page:
-            QMessageBox.critical(self, t("messages.error"), t("templates.no_parent_reference"))
+
+            QMessageBox.critical(self, t("error"), t("cannot_reference_parent"))
             return
         
-        name, ok = self.parent_page.show_custom_input(t("templates.save_template_title"), t("templates.enter_template_name"), default_text="")
+        name, ok = self.parent_page.show_custom_input(t("save_template"), t("enter_template_name"), default_text="")
         if not ok or not name.strip():
             return
         
-        remark, ok = self.parent_page.show_custom_input(t("templates.save_template_title"), t("templates.enter_template_remark"), default_text="")
+        remark, ok = self.parent_page.show_custom_input(t("save_template"), t("enter_remark_optional"), default_text="")
         if not ok:
             remark = ""
         
         current_params = self.parent_page.get_all_params_for_template()
         
         if not current_params:
-            self.parent_page.show_custom_message(t("messages.hint"), t("templates.no_params_to_save"))
+            self.parent_page.show_custom_message(t("tip"), t("no_params_to_save"))
             return
 
         template_id = f"template_{int(datetime.datetime.now().timestamp())}"
@@ -415,15 +420,15 @@ class TemplateManager(QDialog):
         
         self.save_templates()
         self.refresh_template_list()
-        self.parent_page.show_custom_message(t("templates.template_saved"), t("templates.template_saved_msg").format(name))
+        self.parent_page.show_custom_message(t("success"), t("template_saved_success").format(name=name))
 
     def apply_template_by_id(self, template_id):
         if template_id not in self.templates:
-            self.parent_page.show_custom_message(t("messages.error"), t("templates.template_not_found"))
+            self.parent_page.show_custom_message(t("error"), t("template_data_not_exist"))
             return
         
         template_data = self.templates[template_id]
-        if not self.parent_page.show_custom_question(t("templates.confirm_apply_template"), t("templates.confirm_apply_msg").format(template_data['name'])):
+        if not self.parent_page.show_custom_question(t("confirm_apply"), t("confirm_apply_template").format(name=template_data['name'])):
             return
         
         params = template_data.get('params', {})
@@ -433,7 +438,7 @@ class TemplateManager(QDialog):
         self.save_templates()
         self.refresh_template_list()
         
-        self.parent_page.show_custom_message(t("templates.template_applied"), t("templates.template_applied_msg").format(template_data['name'], applied_count))
+        self.parent_page.show_custom_message(t("apply_success"), t("template_applied_success").format(name=template_data['name'], count=applied_count))
         self.close()
 
     def edit_template_by_id(self, template_id):
@@ -445,41 +450,41 @@ class TemplateManager(QDialog):
             return
         
         old_name = self.templates[template_id].get('name', '')
-        new_name, ok = self.parent_page.show_custom_input(t("templates.edit_template_name_title"), t("templates.enter_new_template_name"), default_text=old_name)
+        new_name, ok = self.parent_page.show_custom_input(t("edit_template_name"), t("enter_new_template_name"), default_text=old_name)
         
         if ok and new_name.strip():
             self.templates[template_id]['name'] = new_name.strip()
             self.save_templates()
             self.refresh_template_list()
-            self.parent_page.show_custom_message(t("messages.success"), t("templates.template_name_updated"))
+            self.parent_page.show_custom_message(t("success"), t("template_name_updated"))
 
     def edit_template_remark(self, template_id):
         if template_id not in self.templates:
             return
         
         old_remark = self.templates[template_id].get('remark', '')
-        new_remark, ok = self.parent_page.show_custom_input(t("templates.edit_template_remark_title"), t("templates.enter_new_template_remark"), default_text=old_remark)
+        new_remark, ok = self.parent_page.show_custom_input(t("edit_template_remark"), t("enter_new_remark"), default_text=old_remark)
         
         if ok:
             self.templates[template_id]['remark'] = new_remark.strip()
             self.save_templates()
             self.refresh_template_list()
-            self.parent_page.show_custom_message(t("messages.success"), t("templates.template_remark_updated"))
+            self.parent_page.show_custom_message(t("success"), t("template_remark_updated"))
 
     def delete_template_by_id(self, template_id):
         if template_id not in self.templates:
-            self.parent_page.show_custom_message(t("messages.error"), t("templates.template_not_found_delete"))
+            self.parent_page.show_custom_message(t("error"), t("template_not_found_for_delete"))
             return
         
-        template_name = self.templates[template_id].get("name", "this")
-        if self.parent_page.show_custom_question(t("templates.confirm_delete_template"), t("templates.confirm_delete_msg").format(template_name)):
+        template_name = self.templates[template_id].get("name", "template")
+        if self.parent_page.show_custom_question(t("confirm_delete"), t("confirm_delete_template").format(name=template_name)):
             del self.templates[template_id]
             self.save_templates()
             self.refresh_template_list()
-            self.parent_page.show_custom_message(t("messages.success"), t("templates.template_deleted_msg").format(template_name))
+            self.parent_page.show_custom_message(t("success"), t("template_deleted").format(name=template_name))
 
     def import_template(self):
-        file_path, _ = QFileDialog.getOpenFileName(self, t("templates.import_template_title"), "", t("templates.json_files"))
+        file_path, _ = QFileDialog.getOpenFileName(self, t("import_template_dialog"), "", t("json_files"))
         if not file_path:
             return
 
@@ -490,7 +495,7 @@ class TemplateManager(QDialog):
             imported_templates = {}
             if isinstance(data, dict) and 'templates' in data and 'source_tool' in data:
                  if data['source_tool'] != self.tool_name:
-                    if not self.parent_page.show_custom_question(t("templates.tool_mismatch_title"), t("templates.tool_mismatch_msg").format(data['source_tool'], self.tool_name)):
+                    if not self.parent_page.show_custom_question(t("tool_mismatch"), t("tool_mismatch_question").format(source_tool=data['source_tool'], current_tool=self.tool_name)):
                         return
                  imported_templates = data['templates']
             elif isinstance(data, dict):
@@ -500,13 +505,14 @@ class TemplateManager(QDialog):
                     imported_templates = data
 
             if not imported_templates:
-                self.parent_page.show_custom_message(t("templates.import_failed"), t("templates.import_failed_msg"))
+                self.parent_page.show_custom_message(t("import_failed"), t("file_format_unrecognized"))
                 return
 
             merge_count = 0
             new_count = 0
             for t_id, t_data in imported_templates.items():
                 if t_id in self.templates:
+
                     merge_count += 1
                 else:
                     new_count += 1
@@ -514,18 +520,18 @@ class TemplateManager(QDialog):
 
             self.save_templates()
             self.refresh_template_list()
-            self.parent_page.show_custom_message(t("templates.import_success"), t("templates.import_success_msg").format(new_count, merge_count))
+            self.parent_page.show_custom_message(t("import_success"), t("import_success_details").format(new_count=new_count, merge_count=merge_count))
 
         except Exception as e:
-            self.parent_page.show_custom_message(t("templates.import_failed"), t("templates.import_error").format(e))
+            self.parent_page.show_custom_message(t("import_failed"), t("read_template_file_failed").format(e=e))
 
     def export_template(self):
         if not self.templates:
-            self.parent_page.show_custom_message(t("messages.hint"), t("templates.no_templates_to_export"))
+            self.parent_page.show_custom_message(t("tip"), t("no_templates_to_export"))
             return
 
         default_filename = f"templates_{self.tool_name}_{datetime.datetime.now().strftime('%Y%m%d')}.json"
-        file_path, _ = QFileDialog.getSaveFileName(self, t("templates.export_template_title"), default_filename, t("templates.json_files"))
+        file_path, _ = QFileDialog.getSaveFileName(self, t("export_template_dialog"), default_filename, t("json_files"))
 
         if not file_path:
             return
@@ -538,9 +544,9 @@ class TemplateManager(QDialog):
             }
             with open(file_path, 'w', encoding='utf-8') as f:
                 json.dump(export_data, f, ensure_ascii=False, indent=2)
-            self.parent_page.show_custom_message(t("templates.export_success"), t("templates.export_success_msg").format(file_path))
+            self.parent_page.show_custom_message(t("export_success"), t("export_success_path").format(file_path=file_path))
         except Exception as e:
-            self.parent_page.show_custom_message(t("templates.export_failed"), t("templates.export_failed_msg").format(e))
+            self.parent_page.show_custom_message(t("export_failed"), t("write_template_file_failed").format(e=e))
 
     def refresh_template_list(self):
         self.templates = self.load_templates()

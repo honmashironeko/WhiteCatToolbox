@@ -77,9 +77,9 @@ class ToolConfigParser:
                             if current_section in config and current_subsection in config[current_section]:
                                 config[current_section][current_subsection].append(param_info)
                     except Exception as e:
-                        print(t("config.line_parse_warning", line.strip(), e))
+                        print(t("config_parse_line_error").format(line=line.strip(), e=e))
                         continue
         except Exception as e:
-            print(t("config.parse_error", e))
+            print(t("config_parse_error").format(e=e))
         
         return config

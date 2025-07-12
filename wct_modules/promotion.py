@@ -37,7 +37,7 @@ class PromotionPage(QWidget):
             with open(self.config_file, 'w', encoding='utf-8') as f:
                 json.dump(config, f, ensure_ascii=False, indent=2)
         except Exception as e:
-            print(t("promotion.save_config_failed", e))
+            print(f"{t('save_promotion_failed')}: {e}")
     
     def setup_ui(self):
         
@@ -59,7 +59,7 @@ class PromotionPage(QWidget):
         header_layout.setContentsMargins(s(20), s(16), s(20), s(16))
         header_layout.setSpacing(s(16))
 
-        title_text = t("promotion.title") if not self.ads_enabled else t("promotion.promotion_info")
+        title_text = t("white_cat_toolbox") if not self.ads_enabled else t("promotion_info")
         self.title_label = QLabel(title_text)
         self.title_label.setFont(QFont(fonts["system"], s(16), QFont.Bold))
         self.title_label.setAlignment(Qt.AlignCenter)
@@ -75,10 +75,11 @@ class PromotionPage(QWidget):
         header_layout.addWidget(self.title_label)
         header_layout.addStretch()
 
-        self.ads_toggle_btn = QPushButton(t("promotion.disable_promotion") if self.ads_enabled else t("promotion.enable_promotion"))
+        self.ads_toggle_btn = QPushButton(t("close_promotion") if self.ads_enabled else t("enable_promotion"))
         self.ads_toggle_btn.setFont(QFont(fonts["system"], s(10), QFont.Bold))
-        self.ads_toggle_btn.setFixedHeight(s(36))
+        self.ads_toggle_btn.setMinimumHeight(s(36))
         self.ads_toggle_btn.setMinimumWidth(s(100))
+        self.ads_toggle_btn.setSizePolicy(QSizePolicy.Preferred, QSizePolicy.Fixed)
         self.ads_toggle_btn.setCursor(Qt.PointingHandCursor)
         
         self.update_toggle_button_style()
@@ -113,13 +114,13 @@ class PromotionPage(QWidget):
         layout.setContentsMargins(0, 0, 0, 0)
         layout.setSpacing(s(20))
 
-        left_ad = self.create_enhanced_ad_widget("promotion/xm.txt", t("promotion.project_recommendation"))
+        left_ad = self.create_enhanced_ad_widget("promotion/xm.txt", t("project_recommendations"))
         layout.addWidget(left_ad, 1)
 
         sponsor_widget = self.create_enhanced_sponsor_widget("promotion/zz.txt")
         layout.addWidget(sponsor_widget, 1)
 
-        right_ad = self.create_enhanced_ad_widget("promotion/gg.txt", t("promotion.sponsor"))
+        right_ad = self.create_enhanced_ad_widget("promotion/gg.txt", t("sponsors"))
         layout.addWidget(right_ad, 1)
         
         self.content_widget.setLayout(layout)
@@ -130,7 +131,17 @@ class PromotionPage(QWidget):
         layout.setContentsMargins(s(20), s(20), s(20), s(20))
         layout.setSpacing(s(20))
 
-        intro_text = QLabel(t("promotion.intro_text"))
+        intro_text = QLabel(f"""{t('welcome_to_toolbox')}
+
+{t('toolbox_description')}
+
+{t('main_features')}
+{t('feature_1')}
+{t('feature_2')}
+{t('feature_3')}
+{t('feature_4')}
+
+{t('thank_you_using')}!""")
         
         intro_text.setFont(QFont(fonts["system"], s(12)))
         intro_text.setAlignment(Qt.AlignTop | Qt.AlignLeft)
@@ -228,12 +239,12 @@ class PromotionPage(QWidget):
                                 if item_widget:
                                     content_layout.addWidget(item_widget)
                     else:
-                        content_layout.addWidget(self.create_empty_state(t("promotion.no_promotion")))
+                        content_layout.addWidget(self.create_empty_state(t("no_promotion_content")))
             else:
-                content_layout.addWidget(self.create_empty_state(t("promotion.file_not_exist")))
+                content_layout.addWidget(self.create_empty_state(t("promotion_file_not_exist")))
                 
         except Exception as e:
-            content_layout.addWidget(self.create_empty_state(t("promotion.read_failed", str(e))))
+            content_layout.addWidget(self.create_empty_state(f"{t('read_failed')}: {str(e)}"))
         
         content_layout.addStretch()
         scroll_content.setLayout(content_layout)
@@ -274,7 +285,7 @@ class PromotionPage(QWidget):
         title_layout = QHBoxLayout()
         title_layout.setContentsMargins(s(16), s(12), s(16), s(12))
         
-        title_label = QLabel(t("promotion.sponsor_thanks"))
+        title_label = QLabel(t("sponsor_acknowledgments"))
         title_label.setFont(QFont(fonts["system"], s(12), QFont.Bold))
         title_label.setAlignment(Qt.AlignCenter)
         title_label.setStyleSheet("""
@@ -308,10 +319,10 @@ class PromotionPage(QWidget):
                         history_widget = self.create_history_widget(sponsor_data["history"][:10])
                         content_layout.addWidget(history_widget)
             else:
-                content_layout.addWidget(self.create_empty_state(t('promotion.file_not_exist')))
+                content_layout.addWidget(self.create_empty_state(t("acknowledgment_file_not_exist")))
                 
         except Exception as e:
-            content_layout.addWidget(self.create_empty_state(t('promotion.read_failed', e)))
+            content_layout.addWidget(self.create_empty_state(f"{t('loading_failed')}: {e}"))
         
         content_layout.addStretch()
         main_layout.addLayout(content_layout)
@@ -361,8 +372,9 @@ class PromotionPage(QWidget):
                 
                 header_layout.addStretch()
                 
-                link_btn = QPushButton(t('messages.access'))
-                link_btn.setMinimumSize(s(50), s(26))
+                link_btn = QPushButton(t("visit"))
+                link_btn.setMinimumSize(s(60), s(28))
+                link_btn.setSizePolicy(QSizePolicy.Preferred, QSizePolicy.Fixed)
                 link_btn.setCursor(Qt.PointingHandCursor)
                 link_btn.setStyleSheet(f"""
                     QPushButton {{
@@ -398,7 +410,7 @@ class PromotionPage(QWidget):
                 item_widget.setLayout(layout)
                 return item_widget
             else:
-                return self.create_empty_state(f"格式错误: {line}")
+                return self.create_empty_state(f"{t('format_error')}: {line}")
                 
         except Exception as e:
             return None
@@ -475,7 +487,7 @@ class PromotionPage(QWidget):
                                     layout.addWidget(item_widget)
                     else:
                         
-                        empty_label = QLabel(t('promotion.no_promotion'))
+                        empty_label = QLabel(t("no_promotion_content"))
                         empty_label.setFont(QFont(fonts["system"], s(10)))
                         empty_label.setAlignment(Qt.AlignCenter)
                         empty_label.setStyleSheet(f"""
@@ -487,7 +499,7 @@ class PromotionPage(QWidget):
                         layout.addWidget(empty_label)
             else:
                 
-                error_label = QLabel(t('promotion.file_not_exist'))
+                error_label = QLabel(t("promotion_file_path_not_exist").format(file_path=file_path))
                 error_label.setFont(QFont(fonts["system"], s(10)))
                 error_label.setAlignment(Qt.AlignCenter)
                 error_label.setStyleSheet(f"""
@@ -500,7 +512,7 @@ class PromotionPage(QWidget):
         
         except Exception as e:
             
-            error_label = QLabel(t('promotion.read_failed', str(e)))
+            error_label = QLabel(f"{t('read_promotion_content_failed')}: {str(e)}")
             error_label.setFont(QFont(fonts["system"], s(10)))
             error_label.setAlignment(Qt.AlignCenter)
             error_label.setStyleSheet(f"""
@@ -525,7 +537,7 @@ class PromotionPage(QWidget):
     
     def create_sponsor_widget(self, file_path):
         
-        group_box = QGroupBox("赞助鸣谢")
+        group_box = QGroupBox(t("sponsor_acknowledgments").replace("💎 ", ""))
         group_box.setStyleSheet(f"""
             QGroupBox {{
                 background-color: {colors["white"]};
@@ -570,7 +582,7 @@ class PromotionPage(QWidget):
                         sponsor_layout.addWidget(history_widget)
 
             else:
-                error_label = QLabel(t('promotion.file_not_exist'))
+                error_label = QLabel(t("acknowledgment_file_path_not_exist").format(file_path=file_path))
                 error_label.setFont(QFont(fonts["system"], s(10)))
                 error_label.setAlignment(Qt.AlignCenter)
                 error_label.setStyleSheet(f"""
@@ -582,7 +594,7 @@ class PromotionPage(QWidget):
                 sponsor_layout.addWidget(error_label)
                 
         except Exception as e:
-            error_label = QLabel(t('promotion.read_failed', e))
+            error_label = QLabel(f"{t('load_acknowledgments_failed')}: {e}")
             error_label.setFont(QFont(fonts["system"], s(10)))
             error_label.setAlignment(Qt.AlignCenter)
             error_label.setStyleSheet(f"""
@@ -608,13 +620,13 @@ class PromotionPage(QWidget):
             if not line:
                 continue
 
-            if line.startswith("排名"):
+            if line.startswith(t("ranking")):
                 current_section = "ranking"
                 continue
-            elif line.startswith("赞助历史"):
+            elif line.startswith(t("sponsor_history")):
                 current_section = "history"
                 continue
-            elif line.startswith("时间"):
+            elif line.startswith(t("time")):
                 continue  
 
             parts = line.split('\t')
@@ -653,7 +665,7 @@ class PromotionPage(QWidget):
         layout.setContentsMargins(s(12), s(10), s(12), s(10))
         layout.setSpacing(s(8))
 
-        title = QLabel("🏆 排行榜")
+        title = QLabel(t("leaderboard"))
         title.setFont(QFont(fonts["system"], s(10), QFont.Bold))
         title.setAlignment(Qt.AlignCenter)
         title.setStyleSheet(f"""
@@ -681,7 +693,7 @@ class PromotionPage(QWidget):
                 rank_icon.setText("🥉")
             else:
                 rank_icon.setText(f"{rank_num}.")
-            rank_icon.setMinimumWidth(s(32))
+            rank_icon.setFixedWidth(s(32))
             rank_icon.setFont(QFont(fonts["system"], s(10), QFont.Bold))
             rank_icon.setStyleSheet("QLabel { background: transparent; border: none; }")
             rank_layout.addWidget(rank_icon)
@@ -719,7 +731,7 @@ class PromotionPage(QWidget):
         layout.setContentsMargins(s(12), s(10), s(12), s(10))
         layout.setSpacing(s(8))
 
-        title = QLabel("📝 最近赞助")
+        title = QLabel(t("recent_sponsors"))
         title.setFont(QFont(fonts["system"], s(10), QFont.Bold))
         title.setAlignment(Qt.AlignCenter)
         title.setStyleSheet(f"""
@@ -773,7 +785,7 @@ class PromotionPage(QWidget):
 
                 item_widget = QWidget()
                 item_widget.setMinimumHeight(s(70))  
-                item_widget.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Minimum)
+                item_widget.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Preferred)
                 item_widget.setStyleSheet(f"""
                     QWidget {{
                         background-color: {colors["background_very_light"]};
@@ -811,10 +823,10 @@ class PromotionPage(QWidget):
                 
                 header_layout.addStretch()
 
-                link_btn = QPushButton(t('messages.access'))
+                link_btn = QPushButton(t("visit"))
                 link_btn.setFont(QFont(fonts["system"], s(9)))
-                link_btn.setMinimumSize(s(55), s(30))  
-                link_btn.setSizePolicy(QSizePolicy.Fixed, QSizePolicy.Fixed)
+                link_btn.setMinimumSize(s(65), s(32))
+                link_btn.setSizePolicy(QSizePolicy.Preferred, QSizePolicy.Fixed)
                 link_btn.setStyleSheet("""
                     QPushButton {
                         background-color: #4a90e2;
@@ -841,9 +853,7 @@ class PromotionPage(QWidget):
                     desc_label = QLabel(description)
                     desc_label.setFont(QFont(fonts["system"], s(9)))
                     desc_label.setWordWrap(True)
-                    desc_label.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Minimum)
-                    desc_label.setAlignment(Qt.AlignLeft | Qt.AlignTop)
-                    desc_label.setMinimumHeight(s(20))  
+                    desc_label.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Preferred)  
                     desc_label.setStyleSheet("""
                         QLabel {
                             color: #6c757d;
@@ -873,7 +883,7 @@ class PromotionPage(QWidget):
                 layout = QVBoxLayout()
                 layout.setContentsMargins(s(12), s(10), s(12), s(10))
                 
-                error_label = QLabel(f"格式错误: {line}")
+                error_label = QLabel(f"{t('format_error')}: {line}")
                 error_label.setFont(QFont(fonts["system"], s(9)))
                 error_label.setStyleSheet("""
                     QLabel {
@@ -894,14 +904,14 @@ class PromotionPage(QWidget):
         try:
             QDesktopServices.openUrl(QUrl(url))
         except Exception as e:
-            print(f"打开链接失败: {e}")
+            print(f"{t('open_link_failed')}: {e}")
     
     def toggle_ads(self):
         
         self.ads_enabled = not self.ads_enabled
         self.save_ads_config()
 
-        self.ads_toggle_btn.setText(t("promotion.disable_promotion") if self.ads_enabled else t("promotion.enable_promotion"))
+        self.ads_toggle_btn.setText(t("close_promotion") if self.ads_enabled else t("enable_promotion"))
         self.update_toggle_button_style()
 
         self.update_header_title()
@@ -911,7 +921,7 @@ class PromotionPage(QWidget):
     def update_header_title(self):
         
         if hasattr(self, 'title_label'):
-            title_text = t("promotion.title") if not self.ads_enabled else t("promotion.promotion_info")
+            title_text = t("white_cat_toolbox") if not self.ads_enabled else t("promotion_info")
             self.title_label.setText(title_text)
     
     def update_toggle_button_style(self):

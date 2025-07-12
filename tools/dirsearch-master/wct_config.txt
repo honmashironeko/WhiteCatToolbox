@@ -1,0 +1,88 @@
+%常用参数
+%%勾选项
+--version=版本=显示程序版本号并退出=0
+
+%%输入项
+-u=目标URL=目标URL，可使用多个标志=0
+
+
+%全部参数
+%%勾选项
+--version=版本=显示程序版本号并退出=0
+-h=帮助=显示此帮助消息并退出=0
+--stdin=从标准输入读取=从标准输入(STDIN)读取URL=0
+-f=强制扩展=在每个字典条目的末尾添加扩展名。默认情况下，dirsearch仅用扩展名替换%EXT%关键字=0
+-O=覆盖扩展=用您选择的扩展名（通过-e）覆盖字典中的其他扩展名=0
+--remove-extensions=移除扩展名=移除所有路径中的扩展名 (例如 admin.php -> admin)=0
+-U=字典大写=将字典转换为大写=0
+-L=字典小写=将字典转换为小写=0
+-C=字典首字母大写=将字典首字母大写=0
+--async=异步模式=启用异步模式=0
+-r=递归扫描=递归地进行爆破=0
+--deep-recursive=深度递归=对每个目录深度执行递归扫描 (例如 api/users -> api/)=0
+--force-recursive=强制递归=对每个发现的路径进行递归爆破，而不仅仅是目录=0
+--exit-on-error=遇错退出=发生错误时立即退出=0
+-F=跟随重定向=跟随HTTP重定向=0
+--random-agent=随机UA=为每个请求选择一个随机的用户代理(User-Agent)=0
+--tor=使用Tor=使用Tor网络作为代理=0
+--crawl=爬行模式=在响应中爬取新路径=0
+--full-url=显示完整URL=在输出中显示完整URL（在安静模式下自动启用）=0
+--redirects-history=显示重定向历史=显示重定向历史记录=0
+--no-color=无颜色输出=禁用彩色输出=0
+-q=安静模式=启用安静模式=0
+
+%%输入项
+-u=目标URL=目标URL，可使用多个标志=0
+-l=URL列表文件=包含URL列表的文件=0
+--cidr=目标CIDR=目标CIDR地址块=0
+--raw=原始请求文件=从文件加载原始HTTP请求（使用'--scheme'标志设置协议）=0
+--nmap-report=Nmap报告=从Nmap报告中加载目标（确保Nmap扫描时包含-sV标志以获得全面结果）=0
+-s=会话文件=会话文件路径=0
+--config=配置文件=配置文件的路径（默认为 'DIRSEARCH_CONFIG' 环境变量，否则为 'config.ini'）=0
+-w=字典文件=字典文件或包含字典的目录（用逗号分隔）=0
+-e=扩展名=以逗号分隔的扩展名列表 (例如 php,asp)=0
+--exclude-extensions=排除扩展名=以逗号分隔的要排除的扩展名列表 (例如 asp,jsp)=0
+--prefixes=添加前缀=为所有字典条目添加自定义前缀（用逗号分隔）=0
+--suffixes=添加后缀=为所有字典条目添加自定义后缀，忽略目录（用逗号分隔）=0
+-t=线程数=线程数量=0
+-R=最大递归深度=最大递归深度=0
+--recursion-status=递归状态码=执行递归扫描的有效状态码，支持范围（用逗号分隔）=0
+--subdirs=扫描子目录=扫描给定URL的子目录（用逗号分隔）=0
+--exclude-subdirs=排除子目录=在递归扫描期间排除以下子目录（用逗号分隔）=0
+-i=包含状态码=要包含的状态码，用逗号分隔，支持范围 (例如 200,300-399)=0
+-x=排除状态码=要排除的状态码，用逗号分隔，支持范围 (例如 301,500-599)=0
+--exclude-sizes=排除大小=按响应大小排除，用逗号分隔 (例如 0B,4KB)=0
+--exclude-text=排除文本=按响应文本排除，可使用多个标志=0
+--exclude-regex=排除正则=按正则表达式排除响应=0
+--exclude-redirect=排除重定向=如果此正则表达式（或文本）与重定向URL匹配，则排除响应 (例如 '/index.html')=0
+--exclude-response=排除响应页面=排除与此页面响应相似的响应，输入为路径 (例如 404.html)=0
+--skip-on-status=跳过状态码=当遇到这些状态码之一时跳过目标，用逗号分隔，支持范围=0
+--min-response-size=最小响应长度=最小响应长度=0
+--max-response-size=最大响应长度=最大响应长度=0
+--max-time=最大扫描时间=扫描的最大运行时间=0
+-m=HTTP方法=HTTP请求方法 (默认为: GET)=0
+-d=请求数据=HTTP请求数据=0
+--data-file=请求数据文件=包含HTTP请求数据的文件=0
+-H=请求头=HTTP请求头，可使用多个标志=0
+--headers-file=请求头文件=包含HTTP请求头的文件=0
+--auth=身份验证凭据=身份验证凭据 (例如 user:password 或 bearer token)=0
+--auth-type=身份验证类型=身份验证类型 (basic, digest, bearer, ntlm, jwt)=0
+--cert-file=证书文件=包含客户端证书的文件=0
+--key-file=密钥文件=包含客户端证书私钥的文件（未加密）=0
+--user-agent=用户代理=指定用户代理(User-Agent)=0
+--cookie=Cookie=设置请求的Cookie=0
+--timeout=连接超时=连接超时时间=0
+--delay=请求延迟=请求之间的延迟时间=0
+-p=代理=代理URL (HTTP/SOCKS)，可使用多个标志=0
+--proxies-file=代理文件=包含代理服务器列表的文件=0
+--proxy-auth=代理凭据=代理身份验证凭据=0
+--replay-proxy=重放代理=用于重放已发现路径的代理=0
+--scheme=协议=用于原始请求或URL中没有协议时的协议（默认：自动检测）=0
+--max-rate=最大速率=每秒最大请求数=0
+--retries=重试次数=失败请求的重试次数=0
+--ip=服务器IP=服务器IP地址=0
+--interface=网络接口=要使用的网络接口=0
+-o=输出=输出文件或MySQL/PostgreSQL URL=0
+--format=报告格式=报告格式 (可用: simple, plain, json, xml, md, csv, html, sqlite, mysql, postgresql)=0
+--log=日志文件=日志文件路径=0
+

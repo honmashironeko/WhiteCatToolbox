@@ -1,0 +1,40 @@
+name: Inspection
+
+on: [push, pull_request]
+
+jobs:
+  build:
+    runs-on: ${{ matrix.os }}
+
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: [3.9, 3.11]
+        os: ['ubuntu-latest', 'windows-latest']
+
+    steps:
+    - uses: actions/checkout@v4
+    - name: Set up Python ${{ matrix.python-version }}
+      uses: actions/setup-python@v5
+      with:
+        python-version: ${{ matrix.python-version }}
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install codespell flake8 -r requirements.txt
+    - name: Test
+      run: |
+        python3 dirsearch.py -w ./tests/static/wordlist.txt -u https://example.com -o "tmp_report.{extension}" -O json,xml,plain,csv,md,sqlite,html --force-recursive -R 3 --full-url -q
+        python3 dirsearch.py -w ./tests/static/wordlist.txt -l ./tests/static/targets.txt --subdirs /,admin/ --exclude-extensions conf -q -L -f -i 200 --user-agent a --log tmp_log.log
+        python3 dirsearch.py -w ./tests/static/wordlist.txt --nmap-report ./tests/static/nmap.xml --max-rate 2 -H K:V --random-agent --overwrite-extensions --no-color --filter-threshold 3
+        python3 dirsearch.py -w ./tests/static/wordlist.txt --raw ./tests/static/raw.txt --prefixes . --suffixes ~ --skip-on-status 404 -m POST -d test=1 --crawl --min-response-size 9
+        echo https://self-signed.badssl.com | python3 dirsearch.py -w ./tests/static/wordlist.txt --stdin --max-time 8 --auth u:p --auth-type basic --scheme http --target-max-time 9
+
+    - name: Unit Test
+      run: python3 testing.py
+
+    - name: Lint
+      run: |
+        flake8 .
+    - name: Codespell
+      run: codespell -S CONTRIBUTORS.md
