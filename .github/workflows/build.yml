@@ -29,12 +29,12 @@ jobs:
             python-version: '3.11'
           
           # Linux x64
-          - os: ubuntu-20.04
+          - os: ubuntu-22.04
             platform: linux
             arch: x64
             python-version: '3.11'
           # Linux arm64
-          - os: ubuntu-20.04
+          - os: ubuntu-22.04
             platform: linux
             arch: arm64
             python-version: '3.11'
