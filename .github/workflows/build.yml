@@ -1,46 +1,35 @@
-name: Build Multi-Platform Executables
+name: Build Executables
 
 on:
   push:
-    tags:
-      - 'v*'
-  workflow_dispatch:
+    branches: [ main, master ]
+    tags: [ 'v*' ]
   pull_request:
-    branches: [ main ]
+    branches: [ main, master ]
+  workflow_dispatch:
 
 jobs:
   build:
     strategy:
       matrix:
         include:
-          # Windows x64 (主流桌面)
           - os: windows-latest
-            name: Windows-x64
+            platform: windows
             arch: x64
             ext: .exe
-            build_args: --onefile --windowed --icon=favicon.ico --add-data "wct_modules;wct_modules"
-      
-          # macOS Intel x64 (Intel Mac) - 使用Intel runner
-          - os: macos-13
-            name: macOS-Intel
+          - os: ubuntu-latest
+            platform: linux
             arch: x64
             ext: ""
-            build_args: --onefile --windowed --icon=favicon.ico --add-data "wct_modules:wct_modules" --target-architecture x86_64
-          
-          # macOS Apple Silicon ARM64 (M1/M2/M3/M4 Mac) - 使用ARM runner
-          - os: macos-14
-            name: macOS-AppleSilicon
+          - os: macos-latest
+            platform: macos
+            arch: x64
+            ext: ""
+          - os: macos-latest
+            platform: macos
             arch: arm64
             ext: ""
-            build_args: --onefile --windowed --icon=favicon.ico --add-data "wct_modules:wct_modules" --target-architecture arm64
-          
-          # Linux x64 (主流服务器和桌面)
-          - os: ubuntu-latest
-            name: Linux-x64
-            arch: x64
-            ext: ""
-            build_args: --onefile --windowed --icon=favicon.ico --add-data "wct_modules:wct_modules"
-    
+
     runs-on: ${{ matrix.os }}
     
     steps:
@@ -50,130 +39,271 @@ jobs:
       uses: actions/setup-python@v4
       with:
         python-version: '3.11'
-        architecture: ${{ matrix.arch }}
-    
+        
+    - name: Create virtual environment
+      run: |
+        python -m venv venv
+        
+    - name: Activate virtual environment (Windows)
+      if: matrix.os == 'windows-latest'
+      run: |
+        venv\Scripts\activate
+        echo "VIRTUAL_ENV=$env:GITHUB_WORKSPACE\venv" >> $env:GITHUB_ENV
+        echo "$env:GITHUB_WORKSPACE\venv\Scripts" >> $env:GITHUB_PATH
+        
+    - name: Activate virtual environment (Unix)
+      if: matrix.os != 'windows-latest'
+      run: |
+        source venv/bin/activate
+        echo "VIRTUAL_ENV=$GITHUB_WORKSPACE/venv" >> $GITHUB_ENV
+        echo "$GITHUB_WORKSPACE/venv/bin" >> $GITHUB_PATH
+        
     - name: Install dependencies
       run: |
         python -m pip install --upgrade pip
         pip install -r requirements.txt
-    
-    - name: Build with PyInstaller (macOS)
-      if: matrix.os == 'macos-13' || matrix.os == 'macos-14'
-      run: |
-        # 显示当前架构信息
-        echo "Current architecture: $(uname -m)"
-        echo "Python architecture: $(python -c 'import platform; print(platform.machine())')"
         
-        # macOS特殊构建参数
-        pyinstaller ${{ matrix.build_args }} --name=WhiteCatToolbox-${{ matrix.name }} main.py
-        
-        # 验证生成的二进制文件架构
-        file "dist/WhiteCatToolbox-${{ matrix.name }}"
-        if command -v lipo &> /dev/null; then
-          lipo -info "dist/WhiteCatToolbox-${{ matrix.name }}" || echo "Single architecture binary"
-        fi
-    
-    - name: Build with PyInstaller (Non-macOS)
-      if: matrix.os != 'macos-13' && matrix.os != 'macos-14'
+    - name: Install additional dependencies for packaging
       run: |
-        pyinstaller ${{ matrix.build_args }} --name=WhiteCatToolbox-${{ matrix.name }} main.py
-    
-    - name: Create release package (Windows)
+        pip install requests urllib3 certifi charset-normalizer idna
+        
+    - name: Create PyInstaller spec file
+      run: |
+        python -c "
+import os
+import sys
+
+# Get the current directory
+current_dir = os.getcwd()
+
+# Define the spec content
+spec_content = '''
+# -*- mode: python ; coding: utf-8 -*-
+
+import sys
+import os
+from PyInstaller.utils.hooks import collect_all, collect_data_files
+
+block_cipher = None
+
+# Collect all data and submodules for PySide6
+pyside6_datas, pyside6_binaries, pyside6_hiddenimports = collect_all('PySide6')
+
+# Additional hidden imports for core Python modules
+additional_hiddenimports = [
+    'ssl',
+    'bz2', 
+    'lzma',
+    'sqlite3',
+    'hashlib',
+    'hmac',
+    'urllib',
+    'urllib.request',
+    'urllib.parse',
+    'urllib.error',
+    'http',
+    'http.client',
+    'json',
+    'base64',
+    'zlib',
+    'gzip',
+    'tarfile',
+    'zipfile',
+    'socket',
+    'threading',
+    'multiprocessing',
+    'concurrent',
+    'concurrent.futures',
+    'queue',
+    'logging',
+    'datetime',
+    'time',
+    'calendar',
+    'email',
+    'email.mime',
+    'email.mime.text',
+    'email.mime.multipart',
+    'xml',
+    'xml.etree',
+    'xml.etree.ElementTree',
+    'csv',
+    'io',
+    'tempfile',
+    'shutil',
+    'subprocess',
+    'platform',
+    'ctypes',
+    'struct',
+    'binascii',
+    'uuid',
+    'random',
+    'secrets',
+    'weakref',
+    'copy',
+    'pickle',
+    'collections',
+    'collections.abc',
+    'functools',
+    'itertools',
+    'operator',
+    'types',
+    'inspect',
+    'traceback',
+    'warnings',
+    'contextlib',
+    'pathlib',
+    'glob',
+    'fnmatch',
+    're',
+    'string',
+    'textwrap',
+    'unicodedata',
+    'locale',
+    'encodings',
+    'encodings.utf_8',
+    'encodings.ascii',
+    'encodings.latin_1',
+    'encodings.cp1252',
+    'mimetypes',
+    'sysconfig',
+    'distutils',
+    'pkg_resources',
+    'importlib',
+    'importlib.util',
+    'importlib.metadata',
+    'site',
+    'PySide6.QtCore',
+    'PySide6.QtGui', 
+    'PySide6.QtWidgets',
+    'PySide6.QtNetwork',
+    'wct_modules',
+    'wct_modules.config',
+    'wct_modules.i18n',
+    'wct_modules.main_window',
+    'wct_modules.parameters',
+    'wct_modules.process',
+    'wct_modules.process_tab',
+    'wct_modules.promotion',
+    'wct_modules.styles',
+    'wct_modules.templates',
+    'wct_modules.theme',
+    'wct_modules.tool_operation',
+    'wct_modules.update_checker',
+    'wct_modules.utils',
+    'wct_modules.widgets',
+]
+
+a = Analysis(
+    ['main.py'],
+    pathex=[],
+    binaries=pyside6_binaries,
+    datas=[
+        ('wct_modules', 'wct_modules'),
+        ('favicon.ico', '.'),
+        ('config', 'config'),
+        ('promotion', 'promotion'),
+        ('sitecustomize.py', '.'),
+        ('promotion_config.json', '.'),
+    ] + pyside6_datas + collect_data_files('PySide6'),
+    hiddenimports=pyside6_hiddenimports + additional_hiddenimports,
+    hookspath=[],
+    hooksconfig={},
+    runtime_hooks=[],
+    excludes=[],
+    win_no_prefer_redirects=False,
+    win_private_assemblies=False,
+    cipher=block_cipher,
+    noarchive=False,
+)
+
+pyz = PYZ(a.pure, a.zipped_data, cipher=block_cipher)
+
+exe = EXE(
+    pyz,
+    a.scripts,
+    a.binaries,
+    a.zipfiles,
+    a.datas,
+    [],
+    name='WhiteCatToolbox',
+    debug=False,
+    bootloader_ignore_signals=False,
+    strip=False,
+    upx=True,
+    upx_exclude=[],
+    runtime_tmpdir=None,
+    console=False,
+    disable_windowed_traceback=False,
+    argv_emulation=False,
+    target_arch=None,
+    codesign_identity=None,
+    entitlements_file=None,
+    icon='favicon.ico'
+)
+'''
+
+# Write the spec file
+with open('WhiteCatToolbox.spec', 'w', encoding='utf-8') as f:
+    f.write(spec_content)
+
+print('PyInstaller spec file created successfully')
+"
+        
+    - name: Set target architecture for macOS arm64
+      if: matrix.platform == 'macos' && matrix.arch == 'arm64'
+      run: |
+        echo "TARGET_ARCH=--target-arch arm64" >> $GITHUB_ENV
+        
+    - name: Set target architecture for other platforms
+      if: matrix.platform != 'macos' || matrix.arch != 'arm64'
+      run: |
+        echo "TARGET_ARCH=" >> $GITHUB_ENV
+        
+    - name: Build executable
+      run: |
+        pyinstaller ${{ env.TARGET_ARCH }} --clean --noconfirm WhiteCatToolbox.spec
+        
+    - name: List build output
+      run: |
+        ls -la dist/
+        
+    - name: Create release directory
+      run: |
+        mkdir -p release
+        
+    - name: Copy executable (Windows)
       if: matrix.os == 'windows-latest'
       run: |
-        mkdir release
-        copy "dist\WhiteCatToolbox-${{ matrix.name }}${{ matrix.ext }}" release\
-        copy README.md release\
-        copy LICENSE release\
-        copy sitecustomize.py release\
-        mkdir release\config
-        mkdir release\promotion
-        copy config\* release\config\
-        copy promotion\* release\promotion\
-    
-    - name: Create release package (Unix)
+        copy "dist\WhiteCatToolbox.exe" "release\WhiteCatToolbox-${{ matrix.platform }}-${{ matrix.arch }}.exe"
+        
+    - name: Copy executable (Unix)
       if: matrix.os != 'windows-latest'
       run: |
-        mkdir -p release/config
-        mkdir -p release/promotion
-        cp "dist/WhiteCatToolbox-${{ matrix.name }}${{ matrix.ext }}" release/
-        cp README.md release/
-        cp LICENSE release/
-        cp sitecustomize.py release/
-        cp -r config/* release/config/
-        cp -r promotion/* release/promotion/
-        chmod +x "release/WhiteCatToolbox-${{ matrix.name }}${{ matrix.ext }}"
-    
+        cp "dist/WhiteCatToolbox" "release/WhiteCatToolbox-${{ matrix.platform }}-${{ matrix.arch }}"
+        chmod +x "release/WhiteCatToolbox-${{ matrix.platform }}-${{ matrix.arch }}"
+        
     - name: Upload artifacts
-      uses: actions/upload-artifact@v4
+      uses: actions/upload-artifact@v3
       with:
-        name: WhiteCatToolbox-${{ matrix.name }}
-        path: release/
+        name: WhiteCatToolbox-${{ matrix.platform }}-${{ matrix.arch }}
+        path: release/WhiteCatToolbox-${{ matrix.platform }}-${{ matrix.arch }}${{ matrix.ext }}
         retention-days: 30
-    
-    - name: Create Release
-      if: startsWith(github.ref, 'refs/tags/')
-      uses: softprops/action-gh-release@v1
-      with:
-        files: release/*
-        draft: false
-        prerelease: false
-      env:
-        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
-  # 创建macOS Universal Binary（同时支持Intel和Apple Silicon）
-  build-macos-universal:
+  release:
     needs: build
-    runs-on: macos-latest
-    if: startsWith(github.ref, 'refs/tags/')
+    runs-on: ubuntu-latest
+    if: startsWith(github.ref, 'refs/tags/v')
     
     steps:
-    - name: Download Intel build
-      uses: actions/download-artifact@v4
-      with:
-        name: WhiteCatToolbox-macOS-Intel
-        path: intel-build/
-    
-    - name: Download Apple Silicon build  
-      uses: actions/download-artifact@v4
-      with:
-        name: WhiteCatToolbox-macOS-AppleSilicon
-        path: arm-build/
-    
-    - name: Create Universal Binary
-      run: |
-        mkdir -p universal-build/config
-        mkdir -p universal-build/promotion
-        
-        # 复制其他文件（从Intel版本）
-        cp intel-build/README.md universal-build/
-        cp intel-build/LICENSE universal-build/
-        cp intel-build/sitecustomize.py universal-build/
-        cp -r intel-build/config/* universal-build/config/
-        cp -r intel-build/promotion/* universal-build/promotion/
-        
-        # 使用lipo创建Universal Binary
-        lipo -create \
-          intel-build/WhiteCatToolbox-macOS-Intel \
-          arm-build/WhiteCatToolbox-macOS-AppleSilicon \
-          -output universal-build/WhiteCatToolbox-macOS-Universal
-        
-        chmod +x universal-build/WhiteCatToolbox-macOS-Universal
-        
-        # 验证Universal Binary
-        file universal-build/WhiteCatToolbox-macOS-Universal
-        lipo -info universal-build/WhiteCatToolbox-macOS-Universal
-    
-    - name: Upload Universal Binary
-      uses: actions/upload-artifact@v4
-      with:
-        name: WhiteCatToolbox-macOS-Universal
-        path: universal-build/
-        retention-days: 30
-    
-    - name: Add to Release
+    - name: Download all artifacts
+      uses: actions/download-artifact@v3
+      
+    - name: Create Release
       uses: softprops/action-gh-release@v1
       with:
-        files: universal-build/*
+        files: |
+          WhiteCatToolbox-*/WhiteCatToolbox-*
+        draft: false
+        prerelease: false
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
