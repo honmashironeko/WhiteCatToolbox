@@ -1,4 +1,4 @@
-name: Build Multi-Platform Releases
+name: Build and Release
 
 on:
   push:
@@ -12,119 +12,77 @@ jobs:
       matrix:
         include:
           - os: windows-latest
-            name: windows
-            pyinstaller_flags: --windowed
-            extension: .exe
-            artifact_name: WhiteCatToolbox-windows
-          - os: ubuntu-latest
-            name: linux
-            pyinstaller_flags: --windowed
-            extension: ""
-            artifact_name: WhiteCatToolbox-linux
-          - os: macos-latest
-            name: macos-x64
+            platform: windows
             arch: x64
-            pyinstaller_flags: --windowed
-            extension: ""
-            artifact_name: WhiteCatToolbox-macos-x64
-          - os: macos-latest
-            name: macos-arm64
+          - os: ubuntu-latest
+            platform: linux
+            arch: x64
+          - os: macos-13
+            platform: macos
+            arch: x64
+          - os: macos-14
+            platform: macos
             arch: arm64
-            pyinstaller_flags: --windowed
-            extension: ""
-            artifact_name: WhiteCatToolbox-macos-arm64
 
     runs-on: ${{ matrix.os }}
-
+    
     steps:
-    - name: Checkout code
-      uses: actions/checkout@v4
-
-    - name: Install system dependencies (Linux)
-      if: matrix.name == 'linux'
-      run: |
-        sudo apt-get update
-        sudo apt-get install -y libbz2-dev libssl-dev libffi-dev zlib1g-dev libncurses5-dev libgdbm-dev libnss3-dev libreadline-dev libsqlite3-dev
-
-    - name: Install system dependencies (macOS)
-      if: matrix.name == 'macos-x64' || matrix.name == 'macos-arm64'
-      run: |
-        brew install openssl libffi
-
+    - uses: actions/checkout@v4
+    
     - name: Set up Python
       uses: actions/setup-python@v4
       with:
         python-version: '3.11'
-        architecture: ${{ matrix.arch || 'x64' }}
-
+        
     - name: Install dependencies
       run: |
         python -m pip install --upgrade pip
         pip install -r requirements.txt
-
+        pip install pyinstaller
+        
     - name: Build with PyInstaller (Windows/Linux)
-      if: matrix.name != 'macos-arm64' && matrix.name != 'macos-x64'
+      if: matrix.platform != 'macos'
       run: |
-        pyinstaller --onefile ${{ matrix.pyinstaller_flags }} --icon=favicon.ico --name=WhiteCatToolbox${{ matrix.extension }} --hidden-import=ssl --hidden-import=bz2 --hidden-import=PySide6.QtCore --hidden-import=PySide6.QtWidgets --hidden-import=PySide6.QtGui --collect-all PySide6 main.py
-
+        pyinstaller WhiteCatToolbox.spec
+        
     - name: Build with PyInstaller (macOS x64)
-      if: matrix.name == 'macos-x64'
+      if: matrix.platform == 'macos' && matrix.arch == 'x64'
       run: |
-        pyinstaller --onefile ${{ matrix.pyinstaller_flags }} --icon=favicon.ico --name=WhiteCatToolbox --target-arch=x86_64 --hidden-import=ssl --hidden-import=bz2 --hidden-import=PySide6.QtCore --hidden-import=PySide6.QtWidgets --hidden-import=PySide6.QtGui --collect-all PySide6 main.py
-
-    - name: Build with PyInstaller (macOS ARM64)
-      if: matrix.name == 'macos-arm64'
+        pyinstaller WhiteCatToolbox.spec --target-arch x86_64
+        
+    - name: Build with PyInstaller (macOS arm64)
+      if: matrix.platform == 'macos' && matrix.arch == 'arm64'
       run: |
-        pyinstaller --onefile ${{ matrix.pyinstaller_flags }} --icon=favicon.ico --name=WhiteCatToolbox --target-arch=arm64 --hidden-import=ssl --hidden-import=bz2 --hidden-import=PySide6.QtCore --hidden-import=PySide6.QtWidgets --hidden-import=PySide6.QtGui --collect-all PySide6 main.py
-
-    - name: Create distribution directory
+        pyinstaller WhiteCatToolbox.spec --target-arch arm64
+        
+    - name: Create distribution package
+      shell: bash
       run: |
-        mkdir -p dist-package
-
-    - name: Copy executable and resources (Windows)
-      if: matrix.name == 'windows'
-      run: |
-        copy "dist\WhiteCatToolbox.exe" "dist-package\"
-        xcopy "config" "dist-package\config\" /E /I
-        xcopy "promotion" "dist-package\promotion\" /E /I
-        copy "sitecustomize.py" "dist-package\"
-      shell: cmd
-
-    - name: Copy executable and resources (Linux)
-      if: matrix.name == 'linux'
-      run: |
-        cp dist/WhiteCatToolbox dist-package/
-        cp -r config dist-package/
-        cp -r promotion dist-package/
-        cp sitecustomize.py dist-package/
-
-    - name: Copy executable and resources (macOS)
-      if: matrix.name == 'macos-x64' || matrix.name == 'macos-arm64'
-      run: |
-        cp dist/WhiteCatToolbox dist-package/
-        cp -r config dist-package/
-        cp -r promotion dist-package/
-        cp sitecustomize.py dist-package/
-
-    - name: Create ZIP archive (Windows)
-      if: matrix.name == 'windows'
-      run: |
-        cd dist-package
-        7z a -tzip "../${{ matrix.artifact_name }}.zip" *
-      shell: cmd
-
-    - name: Create ZIP archive (Linux/macOS)
-      if: matrix.name != 'windows'
-      run: |
-        cd dist-package
-        zip -r "../${{ matrix.artifact_name }}.zip" .
-
-    - name: Upload artifact
+        if [ "${{ matrix.platform }}" = "windows" ]; then
+          mkdir -p dist/WhiteCatToolbox-${{ matrix.platform }}-${{ matrix.arch }}
+          cp dist/WhiteCatToolbox.exe dist/WhiteCatToolbox-${{ matrix.platform }}-${{ matrix.arch }}/
+          cp -r config dist/WhiteCatToolbox-${{ matrix.platform }}-${{ matrix.arch }}/
+          cp -r promotion dist/WhiteCatToolbox-${{ matrix.platform }}-${{ matrix.arch }}/
+          cp sitecustomize.py dist/WhiteCatToolbox-${{ matrix.platform }}-${{ matrix.arch }}/
+          cd dist && 7z a WhiteCatToolbox-${{ matrix.platform }}-${{ matrix.arch }}.zip WhiteCatToolbox-${{ matrix.platform }}-${{ matrix.arch }}/*
+        else
+          mkdir -p dist/WhiteCatToolbox-${{ matrix.platform }}-${{ matrix.arch }}
+          cp dist/WhiteCatToolbox dist/WhiteCatToolbox-${{ matrix.platform }}-${{ matrix.arch }}/
+          cp -r config dist/WhiteCatToolbox-${{ matrix.platform }}-${{ matrix.arch }}/
+          cp -r promotion dist/WhiteCatToolbox-${{ matrix.platform }}-${{ matrix.arch }}/
+          cp sitecustomize.py dist/WhiteCatToolbox-${{ matrix.platform }}-${{ matrix.arch }}/
+          cd dist && tar -czf WhiteCatToolbox-${{ matrix.platform }}-${{ matrix.arch }}.tar.gz WhiteCatToolbox-${{ matrix.platform }}-${{ matrix.arch }}/*
+        fi
+        
+    - name: Upload artifacts
       uses: actions/upload-artifact@v4
       with:
-        name: ${{ matrix.artifact_name }}
-        path: ${{ matrix.artifact_name }}.zip
-
+        name: WhiteCatToolbox-${{ matrix.platform }}-${{ matrix.arch }}
+        path: |
+          dist/WhiteCatToolbox-${{ matrix.platform }}-${{ matrix.arch }}.zip
+          dist/WhiteCatToolbox-${{ matrix.platform }}-${{ matrix.arch }}.tar.gz
+        if-no-files-found: ignore
+        
   release:
     needs: build
     runs-on: ubuntu-latest
@@ -133,15 +91,13 @@ jobs:
     steps:
     - name: Download all artifacts
       uses: actions/download-artifact@v4
-
+      
     - name: Create Release
       uses: softprops/action-gh-release@v1
       with:
         files: |
-          WhiteCatToolbox-windows/WhiteCatToolbox-windows.zip
-          WhiteCatToolbox-linux/WhiteCatToolbox-linux.zip
-          WhiteCatToolbox-macos-x64/WhiteCatToolbox-macos-x64.zip
-          WhiteCatToolbox-macos-arm64/WhiteCatToolbox-macos-arm64.zip
+          */WhiteCatToolbox-*.zip
+          */WhiteCatToolbox-*.tar.gz
         draft: false
         prerelease: false
       env:
