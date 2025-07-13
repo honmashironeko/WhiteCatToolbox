@@ -283,7 +283,7 @@ print('PyInstaller spec file created successfully')
         chmod +x "release/WhiteCatToolbox-${{ matrix.platform }}-${{ matrix.arch }}"
         
     - name: Upload artifacts
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v4
       with:
         name: WhiteCatToolbox-${{ matrix.platform }}-${{ matrix.arch }}
         path: release/WhiteCatToolbox-${{ matrix.platform }}-${{ matrix.arch }}${{ matrix.ext }}
@@ -296,7 +296,7 @@ print('PyInstaller spec file created successfully')
     
     steps:
     - name: Download all artifacts
-      uses: actions/download-artifact@v3
+      uses: actions/download-artifact@v4
       
     - name: Create Release
       uses: softprops/action-gh-release@v1
