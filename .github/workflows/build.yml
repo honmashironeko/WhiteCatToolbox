@@ -69,185 +69,170 @@ jobs:
         
     - name: Create PyInstaller spec file
       run: |
-        python -c "
-import os
-import sys
-
-# Get the current directory
-current_dir = os.getcwd()
-
-# Define the spec content
-spec_content = '''
-# -*- mode: python ; coding: utf-8 -*-
-
-import sys
-import os
-from PyInstaller.utils.hooks import collect_all, collect_data_files
-
-block_cipher = None
-
-# Collect all data and submodules for PySide6
-pyside6_datas, pyside6_binaries, pyside6_hiddenimports = collect_all('PySide6')
-
-# Additional hidden imports for core Python modules
-additional_hiddenimports = [
-    'ssl',
-    'bz2', 
-    'lzma',
-    'sqlite3',
-    'hashlib',
-    'hmac',
-    'urllib',
-    'urllib.request',
-    'urllib.parse',
-    'urllib.error',
-    'http',
-    'http.client',
-    'json',
-    'base64',
-    'zlib',
-    'gzip',
-    'tarfile',
-    'zipfile',
-    'socket',
-    'threading',
-    'multiprocessing',
-    'concurrent',
-    'concurrent.futures',
-    'queue',
-    'logging',
-    'datetime',
-    'time',
-    'calendar',
-    'email',
-    'email.mime',
-    'email.mime.text',
-    'email.mime.multipart',
-    'xml',
-    'xml.etree',
-    'xml.etree.ElementTree',
-    'csv',
-    'io',
-    'tempfile',
-    'shutil',
-    'subprocess',
-    'platform',
-    'ctypes',
-    'struct',
-    'binascii',
-    'uuid',
-    'random',
-    'secrets',
-    'weakref',
-    'copy',
-    'pickle',
-    'collections',
-    'collections.abc',
-    'functools',
-    'itertools',
-    'operator',
-    'types',
-    'inspect',
-    'traceback',
-    'warnings',
-    'contextlib',
-    'pathlib',
-    'glob',
-    'fnmatch',
-    're',
-    'string',
-    'textwrap',
-    'unicodedata',
-    'locale',
-    'encodings',
-    'encodings.utf_8',
-    'encodings.ascii',
-    'encodings.latin_1',
-    'encodings.cp1252',
-    'mimetypes',
-    'sysconfig',
-    'distutils',
-    'pkg_resources',
-    'importlib',
-    'importlib.util',
-    'importlib.metadata',
-    'site',
-    'PySide6.QtCore',
-    'PySide6.QtGui', 
-    'PySide6.QtWidgets',
-    'PySide6.QtNetwork',
-    'wct_modules',
-    'wct_modules.config',
-    'wct_modules.i18n',
-    'wct_modules.main_window',
-    'wct_modules.parameters',
-    'wct_modules.process',
-    'wct_modules.process_tab',
-    'wct_modules.promotion',
-    'wct_modules.styles',
-    'wct_modules.templates',
-    'wct_modules.theme',
-    'wct_modules.tool_operation',
-    'wct_modules.update_checker',
-    'wct_modules.utils',
-    'wct_modules.widgets',
-]
-
-a = Analysis(
-    ['main.py'],
-    pathex=[],
-    binaries=pyside6_binaries,
-    datas=[
-        ('wct_modules', 'wct_modules'),
-        ('favicon.ico', '.'),
-        ('config', 'config'),
-        ('promotion', 'promotion'),
-        ('sitecustomize.py', '.'),
-        ('promotion_config.json', '.'),
-    ] + pyside6_datas + collect_data_files('PySide6'),
-    hiddenimports=pyside6_hiddenimports + additional_hiddenimports,
-    hookspath=[],
-    hooksconfig={},
-    runtime_hooks=[],
-    excludes=[],
-    win_no_prefer_redirects=False,
-    win_private_assemblies=False,
-    cipher=block_cipher,
-    noarchive=False,
-)
-
-pyz = PYZ(a.pure, a.zipped_data, cipher=block_cipher)
-
-exe = EXE(
-    pyz,
-    a.scripts,
-    a.binaries,
-    a.zipfiles,
-    a.datas,
-    [],
-    name='WhiteCatToolbox',
-    debug=False,
-    bootloader_ignore_signals=False,
-    strip=False,
-    upx=True,
-    upx_exclude=[],
-    runtime_tmpdir=None,
-    console=False,
-    disable_windowed_traceback=False,
-    argv_emulation=False,
-    target_arch=None,
-    codesign_identity=None,
-    entitlements_file=None,
-    icon='favicon.ico'
-)
-'''
-
-# Write the spec file
-with open('WhiteCatToolbox.spec', 'w', encoding='utf-8') as f:
-    f.write(spec_content)
-
-print('PyInstaller spec file created successfully')
-"
+        cat > WhiteCatToolbox.spec << 'EOF'
+        # -*- mode: python ; coding: utf-8 -*-
+        
+        import sys
+        import os
+        from PyInstaller.utils.hooks import collect_all, collect_data_files
+        
+        block_cipher = None
+        
+        # Collect all data and submodules for PySide6
+        pyside6_datas, pyside6_binaries, pyside6_hiddenimports = collect_all('PySide6')
+        
+        # Additional hidden imports for core Python modules
+        additional_hiddenimports = [
+            'ssl',
+            'bz2', 
+            'lzma',
+            'sqlite3',
+            'hashlib',
+            'hmac',
+            'urllib',
+            'urllib.request',
+            'urllib.parse',
+            'urllib.error',
+            'http',
+            'http.client',
+            'json',
+            'base64',
+            'zlib',
+            'gzip',
+            'tarfile',
+            'zipfile',
+            'socket',
+            'threading',
+            'multiprocessing',
+            'concurrent',
+            'concurrent.futures',
+            'queue',
+            'logging',
+            'datetime',
+            'time',
+            'calendar',
+            'email',
+            'email.mime',
+            'email.mime.text',
+            'email.mime.multipart',
+            'xml',
+            'xml.etree',
+            'xml.etree.ElementTree',
+            'csv',
+            'io',
+            'tempfile',
+            'shutil',
+            'subprocess',
+            'platform',
+            'ctypes',
+            'struct',
+            'binascii',
+            'uuid',
+            'random',
+            'secrets',
+            'weakref',
+            'copy',
+            'pickle',
+            'collections',
+            'collections.abc',
+            'functools',
+            'itertools',
+            'operator',
+            'types',
+            'inspect',
+            'traceback',
+            'warnings',
+            'contextlib',
+            'pathlib',
+            'glob',
+            'fnmatch',
+            're',
+            'string',
+            'textwrap',
+            'unicodedata',
+            'locale',
+            'encodings',
+            'encodings.utf_8',
+            'encodings.ascii',
+            'encodings.latin_1',
+            'encodings.cp1252',
+            'mimetypes',
+            'sysconfig',
+            'distutils',
+            'pkg_resources',
+            'importlib',
+            'importlib.util',
+            'importlib.metadata',
+            'site',
+            'PySide6.QtCore',
+            'PySide6.QtGui', 
+            'PySide6.QtWidgets',
+            'PySide6.QtNetwork',
+            'wct_modules',
+            'wct_modules.config',
+            'wct_modules.i18n',
+            'wct_modules.main_window',
+            'wct_modules.parameters',
+            'wct_modules.process',
+            'wct_modules.process_tab',
+            'wct_modules.promotion',
+            'wct_modules.styles',
+            'wct_modules.templates',
+            'wct_modules.theme',
+            'wct_modules.tool_operation',
+            'wct_modules.update_checker',
+            'wct_modules.utils',
+            'wct_modules.widgets',
+        ]
+        
+        a = Analysis(
+            ['main.py'],
+            pathex=[],
+            binaries=pyside6_binaries,
+            datas=[
+                ('wct_modules', 'wct_modules'),
+                ('favicon.ico', '.'),
+                ('config', 'config'),
+                ('promotion', 'promotion'),
+                ('sitecustomize.py', '.'),
+                ('promotion_config.json', '.'),
+            ] + pyside6_datas + collect_data_files('PySide6'),
+            hiddenimports=pyside6_hiddenimports + additional_hiddenimports,
+            hookspath=[],
+            hooksconfig={},
+            runtime_hooks=[],
+            excludes=[],
+            win_no_prefer_redirects=False,
+            win_private_assemblies=False,
+            cipher=block_cipher,
+            noarchive=False,
+        )
+        
+        pyz = PYZ(a.pure, a.zipped_data, cipher=block_cipher)
+        
+        exe = EXE(
+            pyz,
+            a.scripts,
+            a.binaries,
+            a.zipfiles,
+            a.datas,
+            [],
+            name='WhiteCatToolbox',
+            debug=False,
+            bootloader_ignore_signals=False,
+            strip=False,
+            upx=True,
+            upx_exclude=[],
+            runtime_tmpdir=None,
+            console=False,
+            disable_windowed_traceback=False,
+            argv_emulation=False,
+            target_arch=None,
+            codesign_identity=None,
+            entitlements_file=None,
+            icon='favicon.ico'
+        )
+        EOF
         
     - name: Set target architecture for macOS arm64
       if: matrix.platform == 'macos' && matrix.arch == 'arm64'
