@@ -40,6 +40,17 @@ jobs:
     - name: Checkout code
       uses: actions/checkout@v4
 
+    - name: Install system dependencies (Linux)
+      if: matrix.name == 'linux'
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y libbz2-dev libssl-dev libffi-dev zlib1g-dev libncurses5-dev libgdbm-dev libnss3-dev libreadline-dev libsqlite3-dev
+
+    - name: Install system dependencies (macOS)
+      if: matrix.name == 'macos-x64' || matrix.name == 'macos-arm64'
+      run: |
+        brew install openssl libffi
+
     - name: Set up Python
       uses: actions/setup-python@v4
       with:
@@ -54,17 +65,17 @@ jobs:
     - name: Build with PyInstaller (Windows/Linux)
       if: matrix.name != 'macos-arm64' && matrix.name != 'macos-x64'
       run: |
-        pyinstaller --onefile ${{ matrix.pyinstaller_flags }} --icon=favicon.ico --name=WhiteCatToolbox${{ matrix.extension }} main.py
+        pyinstaller --onefile ${{ matrix.pyinstaller_flags }} --icon=favicon.ico --name=WhiteCatToolbox${{ matrix.extension }} --hidden-import=ssl --hidden-import=bz2 --hidden-import=PySide6.QtCore --hidden-import=PySide6.QtWidgets --hidden-import=PySide6.QtGui --collect-all PySide6 main.py
 
     - name: Build with PyInstaller (macOS x64)
       if: matrix.name == 'macos-x64'
       run: |
-        pyinstaller --onefile ${{ matrix.pyinstaller_flags }} --icon=favicon.ico --name=WhiteCatToolbox --target-arch=x86_64 main.py
+        pyinstaller --onefile ${{ matrix.pyinstaller_flags }} --icon=favicon.ico --name=WhiteCatToolbox --target-arch=x86_64 --hidden-import=ssl --hidden-import=bz2 --hidden-import=PySide6.QtCore --hidden-import=PySide6.QtWidgets --hidden-import=PySide6.QtGui --collect-all PySide6 main.py
 
     - name: Build with PyInstaller (macOS ARM64)
       if: matrix.name == 'macos-arm64'
       run: |
-        pyinstaller --onefile ${{ matrix.pyinstaller_flags }} --icon=favicon.ico --name=WhiteCatToolbox --target-arch=arm64 main.py
+        pyinstaller --onefile ${{ matrix.pyinstaller_flags }} --icon=favicon.ico --name=WhiteCatToolbox --target-arch=arm64 --hidden-import=ssl --hidden-import=bz2 --hidden-import=PySide6.QtCore --hidden-import=PySide6.QtWidgets --hidden-import=PySide6.QtGui --collect-all PySide6 main.py
 
     - name: Create distribution directory
       run: |
