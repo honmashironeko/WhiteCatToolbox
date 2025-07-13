@@ -10,6 +10,7 @@ from PySide6.QtGui import QFont, QIcon
 
 from .utils import build_cross_platform_command
 from .i18n import t
+from .env_manager import EnvironmentManager
 
 from .widgets import ClickableLabel, EditableTabWidget
 from .theme import colors, fonts, params
@@ -29,10 +30,14 @@ class ToolOperationPage(QWidget):
         self.config_data = None
         self.processes = []
         self.command_history = {}  
+        self.env_manager = EnvironmentManager(logger=None)
         self.setup_ui()
         self.load_config()
         self.load_command_history()
         self.load_env_config()
+
+        if hasattr(self, 'system_log_tab'):
+            self.env_manager.logger = self.system_log_tab
     
     def setup_ui(self):
         
@@ -222,9 +227,76 @@ class ToolOperationPage(QWidget):
                 padding: {s(12)}px;
             }}
         """)
-        venv_env_layout = QHBoxLayout()
+        venv_env_layout = QVBoxLayout()
         venv_env_layout.setContentsMargins(s(8), s(8), s(8), s(8))
         venv_env_layout.setSpacing(s(12))
+        
+
+        python_row_layout = QHBoxLayout()
+        python_row_layout.setSpacing(s(12))
+        
+        python_label = QLabel(t("python_interpreter_path"))
+        python_label.setFont(QFont(fonts["system"], s(9), QFont.Bold))
+        python_label.setMinimumWidth(s(100))
+        python_label.setStyleSheet(f"color: {colors['text_secondary']}; background: transparent; border: none;")
+        
+        self.python_input = QLineEdit()
+        self.python_input.setMinimumHeight(s(32))
+        self.python_input.setPlaceholderText(t("python_path_placeholder"))
+        self.python_input.setToolTip(t("python_path_tooltip"))
+        self.python_input.setStyleSheet(f"""
+            QLineEdit {{
+                background-color: {colors["main_background_start"]};
+                border: 1px solid {colors["background_gray"]};
+                border-radius: {params["border_radius_very_small"]};
+                padding: {s(6)}px {s(10)}px;
+                color: {colors["text_secondary"]};
+                font-size: {s(9)}pt;
+                selection-background-color: {colors["secondary"]};
+            }}
+            QLineEdit:focus {{
+                border-color: {colors["secondary"]};
+                background-color: {colors["white"]};
+            }}
+            QLineEdit:hover {{
+                border-color: #ced4da;
+            }}
+        """)
+        
+        python_browse_btn = QPushButton(t("browse"))
+        python_browse_btn.setMinimumHeight(s(32))
+        python_browse_btn.setMaximumWidth(s(70))
+        python_browse_btn.setStyleSheet(f"""
+            QPushButton {{
+                background-color: {colors["main_background_start"]};
+                border: 1px solid {colors["background_gray"]};
+                border-radius: {params["border_radius_very_small"]};
+                padding: {s(6)}px {s(12)}px;
+                color: {colors["text_secondary"]};
+                font-size: {s(8)}pt;
+                font-weight: 500;
+            }}
+            QPushButton:hover {{
+                background-color: {colors["list_item_hover_background"]};
+                border-color: {colors["secondary"]};
+                color: {colors["list_item_hover_text"]};
+            }}
+            QPushButton:pressed {{
+                background-color: {colors["secondary_pressed"]};
+            }}
+        """)
+        python_browse_btn.clicked.connect(self.browse_python_path)
+        
+        python_row_layout.addWidget(python_label)
+        python_row_layout.addWidget(self.python_input, 1)
+        python_row_layout.addWidget(python_browse_btn)
+        
+        venv_env_layout.addLayout(python_row_layout)
+        
+
+        second_row_layout = QHBoxLayout()
+        second_row_layout.setSpacing(s(12))
+        
         venv_column = QWidget()
         venv_column_layout = QVBoxLayout()
         venv_column_layout.setContentsMargins(0, 0, 0, 0)
@@ -291,11 +363,16 @@ class ToolOperationPage(QWidget):
         env_column_layout.addWidget(env_label)
         env_column_layout.addWidget(self.env_input)
         env_column.setLayout(env_column_layout)
-        venv_env_layout.addWidget(venv_column)
-        venv_env_layout.addWidget(env_column)
+        
+        second_row_layout.addWidget(venv_column)
+        second_row_layout.addWidget(env_column)
+        
+        venv_env_layout.addLayout(second_row_layout)
         
         venv_env_widget.setLayout(venv_env_layout)
         layout.addWidget(venv_env_widget)
+        
+        self.python_input.textChanged.connect(self.save_env_config)
         self.venv_input.textChanged.connect(self.save_env_config)
         self.env_input.textChanged.connect(self.save_env_config)
         self.param_tabs = QTabWidget()
@@ -493,8 +570,19 @@ class ToolOperationPage(QWidget):
 
         tool_path = os.path.join("tools", self.tool_name)
         
+
+        if hasattr(self, 'system_log_tab') and self.env_manager.logger is None:
+            self.env_manager.logger = self.system_log_tab
+        
         try:
-            command = build_cross_platform_command(tool_path, user_command, params)
+
+            venv_path = self.venv_input.text().strip()
+            custom_env = self.env_input.text().strip()
+            
+            command, env_dict = self.env_manager.create_subprocess_wrapper(
+                tool_path, user_command, params, venv_path, custom_env
+            )
+            
         except ValueError as e:
             self.system_log_tab.append_system_log(str(e), "error")
             return
@@ -533,48 +621,9 @@ class ToolOperationPage(QWidget):
         process_tab.append_system_log(f"{t('execute_command')}: {' '.join(command)}", "info")
         process_tab.append_system_log(t("interact_below"), "info")
 
-        venv_path = self.venv_input.text().strip()
-        custom_env = self.env_input.text().strip()
-        env = os.environ.copy()
-
-        if venv_path:
-
-            if os.name == "nt":
-                venv_bin = os.path.join(venv_path, "Scripts")
-            else:
-                venv_bin = os.path.join(venv_path, "bin")
-            env["PATH"] = venv_bin + os.pathsep + env.get("PATH", "")
-            env["VIRTUAL_ENV"] = venv_path
-
-        if custom_env:
-            for pair in custom_env.split(";"):
-                if "=" in pair:
-                    k, v = pair.split("=", 1)
-                    k = k.strip()
-                    v = v.strip()
-
-                    if k.upper() == "PATH":
-                        if "%PATH%" in v:
-                            v = v.replace("%PATH%", env.get("PATH", ""))
-                        if "$PATH" in v:
-                            v = v.replace("$PATH", env.get("PATH", ""))
-                        env["PATH"] = v
-                    else:
-                        env[k] = v
-
-        if venv_path and command[0] in ["python", "python3"]:
-            if os.name == "nt":
-                venv_python = os.path.join(venv_path, "Scripts", "python.exe")
-            else:
-                venv_python = os.path.join(venv_path, "bin", "python")
-            if os.path.exists(venv_python):
-                command[0] = venv_python
-            else:
-                self.system_log_tab.append_system_log(f"{t('venv_python_not_found')}: {venv_python}", "warning")
-        
         process = ToolProcess(self, process_tab)
         process_tab.process = process
-        process.setEnvironment([f"{k}={v}" for k, v in env.items()])
+        process.setEnvironment([f"{k}={v}" for k, v in env_dict.items()])
         process.start(command[0], command[1:])
 
         process_tab.show_prompt()
@@ -1407,9 +1456,6 @@ class ToolOperationPage(QWidget):
         return "", False
 
     def get_all_params_for_template(self):
-        """
-        Get the parameter configuration for the current tab, used for saving as template.
-        """
         current_params = {}
         if not hasattr(self, 'param_tabs'):
             return current_params
@@ -1432,9 +1478,6 @@ class ToolOperationPage(QWidget):
         return current_params
 
     def apply_params_from_template(self, params):
-        """
-        Apply parameters from template to current interface.
-        """
         applied_count = 0
         if not hasattr(self, 'param_tabs'):
             return applied_count
@@ -1471,9 +1514,6 @@ class ToolOperationPage(QWidget):
         return applied_count
 
     def check_and_clear_tool_list_alert(self):
-        """
-        Check alert status of all process tabs, clear tool list alert if all are cleared
-        """
         try:
 
             has_alert = False
@@ -1492,9 +1532,6 @@ class ToolOperationPage(QWidget):
             print(f"[DEBUG] {t('debug_failed_check_alert')}: {e}")
     
     def clear_tool_list_alert(self):
-        """
-        Clear alert status of the corresponding tool in tool list
-        """
         try:
             from wct_modules.main_window import MainWindow
             from PySide6.QtWidgets import QApplication
@@ -1506,9 +1543,6 @@ class ToolOperationPage(QWidget):
             print(f"[DEBUG] {t('debug_failed_clear_alert')}: {e}")
     
     def clear_all_process_tab_alerts(self):
-        """
-        Clear alert status of all process tabs
-        """
         try:
             for i in range(self.process_tabs.count()):
 
@@ -1519,6 +1553,41 @@ class ToolOperationPage(QWidget):
         except Exception as e:
             print(f"[DEBUG] {t('debug_failed_clear_tab_alerts')}: {e}")
 
+    def browse_python_path(self):
+        from PySide6.QtWidgets import QFileDialog
+        
+        if os.name == "nt":
+            filter_text = "Python Executable (python.exe);;All Files (*.*)"
+            initial_path = "C:\\"
+        else:
+            filter_text = "Python Executable (python;python3);;All Files (*)"
+            initial_path = "/usr/bin"
+        
+        file_path, _ = QFileDialog.getOpenFileName(
+            self,
+            t("select_python_interpreter"),
+            initial_path,
+            filter_text
+        )
+        
+        if file_path:
+
+            if self.env_manager.set_manual_python_path(file_path):
+                self.python_input.setText(file_path)
+                self.system_log_tab.append_system_log(
+                    f"{t('python_path_set')}: {file_path}", 
+                    "success"
+                )
+            else:
+                self.system_log_tab.append_system_log(
+                    f"{t('invalid_python_path')}: {file_path}", 
+                    "error"
+                )
+                self.show_custom_message(
+                    t("invalid_python_interpreter"),
+                    f"{t('selected_file_not_valid_python')}\n\n{t('path')}: {file_path}"
+                )
+
     def on_process_tab_clicked(self, index):
         
         self.process_tabs.setTabIcon(index, QIcon())
@@ -1528,7 +1597,8 @@ class ToolOperationPage(QWidget):
         
         tool_env_path = os.path.join("tools", self.tool_name, "env_config.json")
         global_env_path = "global_env_config.json"
-        config = {"venv_path": "", "custom_env": ""}
+        config = {"python_path": "", "venv_path": "", "custom_env": ""}
+        
         if os.path.exists(tool_env_path):
             try:
                 with open(tool_env_path, "r", encoding="utf-8") as f:
@@ -1543,17 +1613,32 @@ class ToolOperationPage(QWidget):
                     config.update(data)
             except Exception as e:
                 print(f"[DEBUG] {t('debug_failed_read_global_env')}: {e}")
+        
+        self.python_input.setText(config.get("python_path", ""))
         self.venv_input.setText(config.get("venv_path", ""))
         self.env_input.setText(config.get("custom_env", ""))
+        
+
+        python_path = config.get("python_path", "").strip()
+        if python_path:
+            self.env_manager.set_manual_python_path(python_path)
 
     def save_env_config(self):
         
         tool_env_path = os.path.join("tools", self.tool_name, "env_config.json")
         config = {
+            "python_path": self.python_input.text().strip(),
             "venv_path": self.venv_input.text().strip(),
             "custom_env": self.env_input.text().strip()
         }
+        
+
+        python_path = config["python_path"]
+        if python_path:
+            self.env_manager.set_manual_python_path(python_path)
+        
         try:
+            os.makedirs(os.path.dirname(tool_env_path), exist_ok=True)
             with open(tool_env_path, "w", encoding="utf-8") as f:
                 json.dump(config, f, ensure_ascii=False, indent=2)
         except Exception as e:
