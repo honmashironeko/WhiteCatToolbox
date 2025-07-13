@@ -1,304 +1,115 @@
-name: Build Executables
+name: Build and Package
 
 on:
   push:
-    branches: [ main, master ]
-    tags: [ 'v*' ]
-  pull_request:
-    branches: [ main, master ]
-  workflow_dispatch:
+    branches: [ main ]
+  release:
+    types: [ created ]
 
 jobs:
   build:
     strategy:
       matrix:
         include:
+          # Windows x86_64
           - os: windows-latest
-            platform: windows
-            arch: x64
-            ext: .exe
-          - os: ubuntu-latest
-            platform: linux
-            arch: x64
-            ext: ""
+            arch: x86_64
+            python-version: '3.11'
+            artifact-name: whitecattoolbox-windows-x86_64
+            archive-ext: zip
+            
+          # macOS x86_64 (Intel)
+          - os: macos-13
+            arch: x86_64
+            python-version: '3.11'
+            artifact-name: whitecattoolbox-macos-x86_64
+            archive-ext: tar.gz
+            
+          # macOS ARM64 (Apple Silicon)
           - os: macos-latest
-            platform: macos
-            arch: x64
-            ext: ""
-          - os: macos-latest
-            platform: macos
             arch: arm64
-            ext: ""
+            python-version: '3.11'
+            artifact-name: whitecattoolbox-macos-arm64
+            archive-ext: tar.gz
+            
+          # Linux x86_64
+          - os: ubuntu-latest
+            arch: x86_64
+            python-version: '3.11'
+            artifact-name: whitecattoolbox-linux-x86_64
+            archive-ext: tar.gz
 
     runs-on: ${{ matrix.os }}
     
     steps:
-    - uses: actions/checkout@v4
-    
-    - name: Set up Python
+    - name: Checkout code
+      uses: actions/checkout@v4
+      
+    - name: Set up Python ${{ matrix.python-version }}
       uses: actions/setup-python@v4
       with:
-        python-version: '3.11'
-        
-    - name: Create virtual environment
-      run: |
-        python -m venv venv
-        
-    - name: Activate virtual environment (Windows)
-      if: matrix.os == 'windows-latest'
-      run: |
-        venv\Scripts\activate
-        echo "VIRTUAL_ENV=$env:GITHUB_WORKSPACE\venv" >> $env:GITHUB_ENV
-        echo "$env:GITHUB_WORKSPACE\venv\Scripts" >> $env:GITHUB_PATH
-        
-    - name: Activate virtual environment (Unix)
-      if: matrix.os != 'windows-latest'
-      run: |
-        source venv/bin/activate
-        echo "VIRTUAL_ENV=$GITHUB_WORKSPACE/venv" >> $GITHUB_ENV
-        echo "$GITHUB_WORKSPACE/venv/bin" >> $GITHUB_PATH
+        python-version: ${{ matrix.python-version }}
         
     - name: Install dependencies
       run: |
         python -m pip install --upgrade pip
+        pip install pyinstaller
         pip install -r requirements.txt
         
-    - name: Install additional dependencies for packaging
-      run: |
-        pip install requests urllib3 certifi charset-normalizer idna
-        
-    - name: Create PyInstaller spec file
-      run: |
-        cat > WhiteCatToolbox.spec << 'EOF'
-        # -*- mode: python ; coding: utf-8 -*-
-        
-        import sys
-        import os
-        from PyInstaller.utils.hooks import collect_all, collect_data_files
-        
-        block_cipher = None
-        
-        # Collect all data and submodules for PySide6
-        pyside6_datas, pyside6_binaries, pyside6_hiddenimports = collect_all('PySide6')
-        
-        # Additional hidden imports for core Python modules
-        additional_hiddenimports = [
-            'ssl',
-            'bz2', 
-            'lzma',
-            'sqlite3',
-            'hashlib',
-            'hmac',
-            'urllib',
-            'urllib.request',
-            'urllib.parse',
-            'urllib.error',
-            'http',
-            'http.client',
-            'json',
-            'base64',
-            'zlib',
-            'gzip',
-            'tarfile',
-            'zipfile',
-            'socket',
-            'threading',
-            'multiprocessing',
-            'concurrent',
-            'concurrent.futures',
-            'queue',
-            'logging',
-            'datetime',
-            'time',
-            'calendar',
-            'email',
-            'email.mime',
-            'email.mime.text',
-            'email.mime.multipart',
-            'xml',
-            'xml.etree',
-            'xml.etree.ElementTree',
-            'csv',
-            'io',
-            'tempfile',
-            'shutil',
-            'subprocess',
-            'platform',
-            'ctypes',
-            'struct',
-            'binascii',
-            'uuid',
-            'random',
-            'secrets',
-            'weakref',
-            'copy',
-            'pickle',
-            'collections',
-            'collections.abc',
-            'functools',
-            'itertools',
-            'operator',
-            'types',
-            'inspect',
-            'traceback',
-            'warnings',
-            'contextlib',
-            'pathlib',
-            'glob',
-            'fnmatch',
-            're',
-            'string',
-            'textwrap',
-            'unicodedata',
-            'locale',
-            'encodings',
-            'encodings.utf_8',
-            'encodings.ascii',
-            'encodings.latin_1',
-            'encodings.cp1252',
-            'mimetypes',
-            'sysconfig',
-            'distutils',
-            'pkg_resources',
-            'importlib',
-            'importlib.util',
-            'importlib.metadata',
-            'site',
-            'PySide6.QtCore',
-            'PySide6.QtGui', 
-            'PySide6.QtWidgets',
-            'PySide6.QtNetwork',
-            'wct_modules',
-            'wct_modules.config',
-            'wct_modules.i18n',
-            'wct_modules.main_window',
-            'wct_modules.parameters',
-            'wct_modules.process',
-            'wct_modules.process_tab',
-            'wct_modules.promotion',
-            'wct_modules.styles',
-            'wct_modules.templates',
-            'wct_modules.theme',
-            'wct_modules.tool_operation',
-            'wct_modules.update_checker',
-            'wct_modules.utils',
-            'wct_modules.widgets',
-        ]
-        
-        # Build data files list dynamically based on what exists
-        data_files = [
-            ('wct_modules', 'wct_modules'),
-            ('favicon.ico', '.'),
-            ('sitecustomize.py', '.'),
-        ]
-        
-        # Add optional files if they exist
-        if os.path.exists('config'):
-            data_files.append(('config', 'config'))
-        if os.path.exists('promotion'):
-            data_files.append(('promotion', 'promotion'))
-        if os.path.exists('promotion_config.json'):
-            data_files.append(('promotion_config.json', '.'))
-        if os.path.exists('templates'):
-            data_files.append(('templates', 'templates'))
-        
-        a = Analysis(
-            ['main.py'],
-            pathex=[],
-            binaries=pyside6_binaries,
-            datas=data_files + pyside6_datas + collect_data_files('PySide6'),
-            hiddenimports=pyside6_hiddenimports + additional_hiddenimports,
-            hookspath=[],
-            hooksconfig={},
-            runtime_hooks=[],
-            excludes=[],
-            win_no_prefer_redirects=False,
-            win_private_assemblies=False,
-            cipher=block_cipher,
-            noarchive=False,
-        )
-        
-        pyz = PYZ(a.pure, a.zipped_data, cipher=block_cipher)
-        
-        exe = EXE(
-            pyz,
-            a.scripts,
-            a.binaries,
-            a.zipfiles,
-            a.datas,
-            [],
-            name='WhiteCatToolbox',
-            debug=False,
-            bootloader_ignore_signals=False,
-            strip=False,
-            upx=True,
-            upx_exclude=[],
-            runtime_tmpdir=None,
-            console=False,
-            disable_windowed_traceback=False,
-            argv_emulation=False,
-            target_arch=None,
-            codesign_identity=None,
-            entitlements_file=None,
-            icon='favicon.ico'
-        )
-        EOF
-        
-    - name: Set target architecture for macOS arm64
-      if: matrix.platform == 'macos' && matrix.arch == 'arm64'
-      run: |
-        echo "TARGET_ARCH=--target-arch arm64" >> $GITHUB_ENV
-        
-    - name: Set target architecture for other platforms
-      if: matrix.platform != 'macos' || matrix.arch != 'arm64'
-      run: |
-        echo "TARGET_ARCH=" >> $GITHUB_ENV
-        
-    - name: Build executable
-      run: |
-        pyinstaller ${{ env.TARGET_ARCH }} --clean --noconfirm WhiteCatToolbox.spec
-        
-    - name: List build output
-      run: |
-        ls -la dist/
-        
-    - name: Create release directory
-      run: |
-        mkdir -p release
-        
-    - name: Copy executable (Windows)
+    - name: Build with PyInstaller (Windows)
       if: matrix.os == 'windows-latest'
       run: |
-        copy "dist\WhiteCatToolbox.exe" "release\WhiteCatToolbox-${{ matrix.platform }}-${{ matrix.arch }}.exe"
+        pyinstaller --onefile --windowed --name whitecattoolbox --icon favicon.ico --add-data "wct_modules;wct_modules" --add-data "favicon.ico;." --add-data "sitecustomize.py;." main.py
         
-    - name: Copy executable (Unix)
+    - name: Build with PyInstaller (macOS/Linux)
       if: matrix.os != 'windows-latest'
       run: |
-        cp "dist/WhiteCatToolbox" "release/WhiteCatToolbox-${{ matrix.platform }}-${{ matrix.arch }}"
-        chmod +x "release/WhiteCatToolbox-${{ matrix.platform }}-${{ matrix.arch }}"
+        pyinstaller --onefile --windowed --name whitecattoolbox --icon favicon.ico --add-data "wct_modules:wct_modules" --add-data "favicon.ico:." --add-data "sitecustomize.py:." main.py
         
-    - name: Upload artifacts
+    - name: Create distribution directory
+      run: |
+        mkdir -p dist-package
+        
+    - name: Copy files to distribution (Windows)
+      if: matrix.os == 'windows-latest'
+      run: |
+        copy dist\whitecattoolbox.exe dist-package\
+        xcopy config dist-package\config\ /E /I
+        xcopy promotion dist-package\promotion\ /E /I
+        
+    - name: Copy files to distribution (macOS/Linux)
+      if: matrix.os != 'windows-latest'
+      run: |
+        cp dist/whitecattoolbox dist-package/
+        cp -r config dist-package/
+        cp -r promotion dist-package/
+        
+    - name: Create archive (Windows)
+      if: matrix.os == 'windows-latest'
+      run: |
+        cd dist-package
+        7z a -tzip ../whitecattoolbox-${{ matrix.arch }}.zip *
+        
+    - name: Create archive (macOS/Linux)
+      if: matrix.os != 'windows-latest'
+      run: |
+        cd dist-package
+        tar -czf ../whitecattoolbox-${{ matrix.arch }}.tar.gz *
+        
+    - name: Upload artifact
       uses: actions/upload-artifact@v4
       with:
-        name: WhiteCatToolbox-${{ matrix.platform }}-${{ matrix.arch }}
-        path: release/WhiteCatToolbox-${{ matrix.platform }}-${{ matrix.arch }}${{ matrix.ext }}
+        name: ${{ matrix.artifact-name }}
+        path: whitecattoolbox-${{ matrix.arch }}.${{ matrix.archive-ext }}
         retention-days: 30
-
-  release:
-    needs: build
-    runs-on: ubuntu-latest
-    if: startsWith(github.ref, 'refs/tags/v')
-    
-    steps:
-    - name: Download all artifacts
-      uses: actions/download-artifact@v4
-      
-    - name: Create Release
-      uses: softprops/action-gh-release@v1
-      with:
-        files: |
-          WhiteCatToolbox-*/WhiteCatToolbox-*
-        draft: false
-        prerelease: false
+        
+    - name: Upload release asset
+      if: github.event_name == 'release'
+      uses: actions/upload-release-asset@v1
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      with:
+        upload_url: ${{ github.event.release.upload_url }}
+        asset_path: whitecattoolbox-${{ matrix.arch }}.${{ matrix.archive-ext }}
+        asset_name: ${{ matrix.artifact-name }}.${{ matrix.archive-ext }}
+        asset_content_type: application/octet-stream
