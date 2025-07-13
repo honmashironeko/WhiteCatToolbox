@@ -47,13 +47,17 @@ jobs:
         
     - name: Build with PyInstaller (macOS x64)
       if: matrix.platform == 'macos' && matrix.arch == 'x64'
+      env:
+        TARGET_ARCH: x86_64
       run: |
-        pyinstaller WhiteCatToolbox.spec --target-arch x86_64
+        pyinstaller WhiteCatToolbox.spec
         
     - name: Build with PyInstaller (macOS arm64)
       if: matrix.platform == 'macos' && matrix.arch == 'arm64'
+      env:
+        TARGET_ARCH: arm64
       run: |
-        pyinstaller WhiteCatToolbox.spec --target-arch arm64
+        pyinstaller WhiteCatToolbox.spec
         
     - name: Create distribution package
       shell: bash

@@ -1,6 +1,15 @@
 # -*- mode: python ; coding: utf-8 -*-
+import os
+import sys
 
 block_cipher = None
+
+# Get target architecture from environment variable or command line
+target_arch = os.environ.get('TARGET_ARCH', None)
+if '--target-arch' in sys.argv:
+    idx = sys.argv.index('--target-arch')
+    if idx + 1 < len(sys.argv):
+        target_arch = sys.argv[idx + 1]
 
 a = Analysis(
     ['main.py'],
@@ -48,7 +57,7 @@ exe = EXE(
     console=False,
     disable_windowed_traceback=False,
     argv_emulation=False,
-    target_arch=None,
+    target_arch=target_arch,
     codesign_identity=None,
     entitlements_file=None,
     icon='favicon.ico',
