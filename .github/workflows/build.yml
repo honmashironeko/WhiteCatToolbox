@@ -185,18 +185,28 @@ jobs:
             'wct_modules.widgets',
         ]
         
+        # Build data files list dynamically based on what exists
+        data_files = [
+            ('wct_modules', 'wct_modules'),
+            ('favicon.ico', '.'),
+            ('sitecustomize.py', '.'),
+        ]
+        
+        # Add optional files if they exist
+        if os.path.exists('config'):
+            data_files.append(('config', 'config'))
+        if os.path.exists('promotion'):
+            data_files.append(('promotion', 'promotion'))
+        if os.path.exists('promotion_config.json'):
+            data_files.append(('promotion_config.json', '.'))
+        if os.path.exists('templates'):
+            data_files.append(('templates', 'templates'))
+        
         a = Analysis(
             ['main.py'],
             pathex=[],
             binaries=pyside6_binaries,
-            datas=[
-                ('wct_modules', 'wct_modules'),
-                ('favicon.ico', '.'),
-                ('config', 'config'),
-                ('promotion', 'promotion'),
-                ('sitecustomize.py', '.'),
-                ('promotion_config.json', '.'),
-            ] + pyside6_datas + collect_data_files('PySide6'),
+            datas=data_files + pyside6_datas + collect_data_files('PySide6'),
             hiddenimports=pyside6_hiddenimports + additional_hiddenimports,
             hookspath=[],
             hooksconfig={},
