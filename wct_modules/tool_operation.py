@@ -3,9 +3,9 @@ import json
 from PySide6.QtWidgets import (
     QWidget, QVBoxLayout, QHBoxLayout, QLabel, QPushButton,
     QTabWidget, QLineEdit, QComboBox, 
-    QSplitter, QDialog, QCheckBox, QSizePolicy, QMessageBox
+    QSplitter, QDialog, QCheckBox, QSizePolicy, QMessageBox, QScrollArea
 )
-from PySide6.QtCore import Qt
+from PySide6.QtCore import Qt, QTimer
 from PySide6.QtGui import QFont, QIcon
 
 from .utils import build_cross_platform_command
@@ -36,7 +36,19 @@ class ToolOperationPage(QWidget):
     
     def setup_ui(self):
         
+        # 创建滚动区域来支持水平滚动
+        scroll_area = QScrollArea()
+        scroll_area.setWidgetResizable(True)
+        scroll_area.setHorizontalScrollBarPolicy(Qt.ScrollBarAsNeeded)
+        scroll_area.setVerticalScrollBarPolicy(Qt.ScrollBarAsNeeded)
+        scroll_area.setStyleSheet("QScrollArea { border: none; background: transparent; }")
+        
+        # 创建可滚动的内容容器
+        content_widget = QWidget()
+        content_widget.setMinimumWidth(s(1200))  # 设置更大的最小宽度，允许超出屏幕
+        
         main_splitter = QSplitter(Qt.Horizontal)
+        main_splitter.setChildrenCollapsible(False)  # 防止区域被完全折叠
 
         left_widget = self.create_parameter_page()
         main_splitter.addWidget(left_widget)
@@ -44,12 +56,62 @@ class ToolOperationPage(QWidget):
         right_widget = self.create_runtime_page()
         main_splitter.addWidget(right_widget)
 
-        main_splitter.setStretchFactor(0, 2)
-        main_splitter.setStretchFactor(1, 3)
+        # 设置更宽松的初始大小比例
+        main_splitter.setStretchFactor(0, 1)
+        main_splitter.setStretchFactor(1, 1)
         
+        # 设置合理的默认分割位置，不限制最大宽度
+        QTimer.singleShot(0, lambda: self.adjust_splitter_sizes(main_splitter))
+        
+        # 将分割器放入内容容器
+        content_layout = QHBoxLayout()
+        content_layout.setContentsMargins(0, 0, 0, 0)
+        content_layout.addWidget(main_splitter)
+        content_widget.setLayout(content_layout)
+        
+        # 将内容容器放入滚动区域
+        scroll_area.setWidget(content_widget)
+        
+        # 主布局
         layout = QHBoxLayout()
-        layout.addWidget(main_splitter)
+        layout.setContentsMargins(0, 0, 0, 0)
+        layout.addWidget(scroll_area)
         self.setLayout(layout)
+    
+    def adjust_splitter_sizes(self, splitter):
+        """调整分割器的初始尺寸"""
+        try:
+            # 获取内容容器的宽度而不是splitter的宽度
+            content_widget = splitter.parent()
+            if content_widget:
+                total_width = content_widget.minimumWidth()
+            else:
+                total_width = 1200  # 默认宽度
+                
+            if total_width > 0:
+                # 计算参数区的合适宽度
+                left_widget = splitter.widget(0)
+                if left_widget:
+                    # 获取参数区的建议宽度
+                    size_hint = left_widget.sizeHint()
+                    preferred_width = size_hint.width() if size_hint.width() > 0 else 600
+                    
+                    # 允许更大的参数区宽度，不限制在屏幕范围内
+                    max_param_width = max(preferred_width, 600)  # 至少600px
+                    param_width = min(max_param_width, int(total_width * 0.5))  # 最多占50%
+                    
+                    # 终端区获得剩余宽度
+                    terminal_width = total_width - param_width
+                    
+                    splitter.setSizes([param_width, terminal_width])
+                else:
+                    # 如果无法获取左侧组件，使用默认的 1:1 比例
+                    half_width = total_width // 2
+                    splitter.setSizes([half_width, half_width])
+        except Exception as e:
+            # 如果出现异常，保持默认行为
+            print(f"调整分割器尺寸时出错: {e}")
+            pass
     
     def create_parameter_page(self):
         
@@ -61,7 +123,7 @@ class ToolOperationPage(QWidget):
             }}
         """)
         layout = QVBoxLayout()
-        layout.setContentsMargins(s(16), s(16), s(16), s(16))
+        layout.setContentsMargins(s(8), s(16), s(8), s(16))  # 减少左右边距
         layout.setSpacing(s(12))
 
         top_widget = QWidget()
@@ -235,6 +297,7 @@ class ToolOperationPage(QWidget):
         venv_label.setStyleSheet(f"color: {colors['text_secondary']}; background: transparent; border: none;")
         self.venv_input = QLineEdit()
         self.venv_input.setMinimumHeight(s(32))
+        self.venv_input.setMinimumWidth(s(200))  # 设置输入框最小宽度
         self.venv_input.setPlaceholderText(t("venv_placeholder"))
         self.venv_input.setToolTip(t("venv_tooltip"))
         self.venv_input.setStyleSheet(f"""
@@ -268,6 +331,7 @@ class ToolOperationPage(QWidget):
         env_label.setStyleSheet(f"color: {colors['text_secondary']}; background: transparent; border: none;")
         self.env_input = QLineEdit()
         self.env_input.setMinimumHeight(s(32))
+        self.env_input.setMinimumWidth(s(200))  # 设置输入框最小宽度
         self.env_input.setPlaceholderText(t("env_placeholder"))
         self.env_input.setToolTip(t("env_tooltip"))
         self.env_input.setStyleSheet(f"""
@@ -359,6 +423,9 @@ class ToolOperationPage(QWidget):
 
         layout.addWidget(self.param_tabs)
         
+        # 设置参数区的合理最小宽度，确保能完全展示内容
+        widget.setMinimumWidth(s(600))  # 增加最小宽度，允许更多内容展示
+        
         widget.setLayout(layout)
         return widget
     
@@ -372,7 +439,7 @@ class ToolOperationPage(QWidget):
             }
         """)
         layout = QVBoxLayout()
-        layout.setContentsMargins(s(16), s(16), s(16), s(16))
+        layout.setContentsMargins(s(8), s(16), s(8), s(16))  # 减少左右边距
         layout.setSpacing(s(8))
 
         self.process_tabs = EditableTabWidget()
@@ -440,6 +507,9 @@ class ToolOperationPage(QWidget):
             }}
         """)
         layout.addWidget(self.process_tabs)
+        
+        # 设置终端回显区的最小宽度与参数区相同
+        widget.setMinimumWidth(s(600))  # 与参数区相同的最小宽度，允许更大范围
         
         widget.setLayout(layout)
         return widget
@@ -1324,6 +1394,7 @@ class ToolOperationPage(QWidget):
         input_edit.setText(default_text)
         input_edit.setFont(QFont("Microsoft YaHei", s(11)))
         input_edit.setMinimumHeight(s(44))
+        input_edit.setMinimumWidth(s(350))  # 设置输入框最小宽度
         input_edit.setStyleSheet(f"""
             QLineEdit {{
                 background-color: #f2f2f7;

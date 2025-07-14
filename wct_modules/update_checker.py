@@ -30,13 +30,9 @@ except ImportError:
     URLLIB_AVAILABLE = False
 
 
-CURRENT_VERSION = "v0.0.2_beta"
+CURRENT_VERSION = "v0.0.4"
 
 def compare_versions(version1, version2):
-    """
-    比较两个版本号
-    返回值: 1表示version1更新, -1表示version2更新, 0表示相同
-    """
     def normalize_version(v):
 
         v = re.sub(r'^v', '', v)

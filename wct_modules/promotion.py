@@ -41,6 +41,17 @@ class PromotionPage(QWidget):
     
     def setup_ui(self):
         
+        # 创建滚动区域来支持水平滚动
+        scroll_area = QScrollArea()
+        scroll_area.setWidgetResizable(True)
+        scroll_area.setHorizontalScrollBarPolicy(Qt.ScrollBarAsNeeded)
+        scroll_area.setVerticalScrollBarPolicy(Qt.ScrollBarAsNeeded)
+        scroll_area.setStyleSheet("QScrollArea { border: none; background: transparent; }")
+        
+        # 创建可滚动的内容容器
+        content_widget = QWidget()
+        content_widget.setMinimumWidth(s(1200))  # 设置更大的最小宽度，允许超出屏幕
+        
         layout = QVBoxLayout()
         layout.setContentsMargins(s(24), s(24), s(24), s(24))
         layout.setSpacing(s(24))
@@ -93,12 +104,22 @@ class PromotionPage(QWidget):
         self.setup_content()
         layout.addWidget(self.content_widget)
         
-        self.setLayout(layout)
+        # 将布局设置到内容容器
+        content_widget.setLayout(layout)
+        
+        # 将内容容器放入滚动区域
+        scroll_area.setWidget(content_widget)
+        
+        # 主布局，包含滚动区域
+        main_layout = QVBoxLayout()
+        main_layout.setContentsMargins(0, 0, 0, 0)
+        main_layout.addWidget(scroll_area)
+        self.setLayout(main_layout)
     
     def setup_content(self):
 
-        if self.content_widget.layout():
-            old_layout = self.content_widget.layout()
+        old_layout = self.content_widget.layout()
+        if old_layout:
             while old_layout.count():
                 child = old_layout.takeAt(0)
                 if child.widget():
@@ -115,12 +136,15 @@ class PromotionPage(QWidget):
         layout.setSpacing(s(20))
 
         left_ad = self.create_enhanced_ad_widget("promotion/xm.txt", t("project_recommendations"))
+        left_ad.setMinimumWidth(s(100))  # 设置推广组件的最小宽度
         layout.addWidget(left_ad, 1)
 
         sponsor_widget = self.create_enhanced_sponsor_widget("promotion/zz.txt")
+        sponsor_widget.setMinimumWidth(s(100))  # 设置推广组件的最小宽度
         layout.addWidget(sponsor_widget, 1)
 
         right_ad = self.create_enhanced_ad_widget("promotion/gg.txt", t("sponsors"))
+        right_ad.setMinimumWidth(s(100))  # 设置推广组件的最小宽度
         layout.addWidget(right_ad, 1)
         
         self.content_widget.setLayout(layout)

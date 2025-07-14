@@ -1,8 +1,3 @@
-"""
-Environment Manager for WhiteCat Toolbox
-Handles Python environment isolation for packaged executables
-"""
-
 import os
 import sys
 import subprocess

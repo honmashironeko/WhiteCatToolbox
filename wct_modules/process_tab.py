@@ -100,7 +100,7 @@ class ProcessTab(QWidget):
         clear_btn = QPushButton(t("clear_output"))
         clear_btn.setMinimumWidth(s(80))
         clear_btn.setSizePolicy(QSizePolicy.Preferred, QSizePolicy.Fixed)
-        clear_btn.setMinimumHeight(s(20))
+        clear_btn.setMinimumHeight(s(30))
         clear_btn.setStyleSheet(f"""
             QPushButton {{
                 background-color: {colors["text_disabled"]};
@@ -109,7 +109,7 @@ class ProcessTab(QWidget):
                 padding: 8px;
                 color: white;
                 font-weight: 500;
-                font-size: {s(8)}pt;
+                font-size: {s(9)}pt;
                 margin: 0px;
                 text-align: center;
             }}
@@ -182,7 +182,7 @@ class ProcessTab(QWidget):
         layout.addWidget(self.current_match_display)
         self.terminal_output = TerminalTextEdit(self)
         self.terminal_output.setFont(QFont(fonts["monospace"], s(9)))
-        self.terminal_output.setMinimumHeight(s(400))  
+        self.terminal_output.setMinimumHeight(s(600))  # 增加终端显示区域的最小高度  
         terminal_style = f"""
             QTextEdit {{
                 background: qlineargradient(x1: 0, y1: 0, x2: 0, y2: 1,
@@ -223,6 +223,7 @@ class ProcessTab(QWidget):
         self.search_input = QLineEdit()
         self.search_input.setPlaceholderText(t("search_content_placeholder"))
         self.search_input.setMinimumHeight(s(24))
+        self.search_input.setMinimumWidth(s(180))  # 设置搜索输入框最小宽度
         self.search_input.setStyleSheet(f"""
             QLineEdit {{
                 background-color: {colors["white"]};
@@ -862,12 +863,15 @@ class ProcessTab(QWidget):
                 user_input = user_input[len(self.prompt):]
             cursor.removeSelectedText()
             cursor.insertHtml(html_text)
-            cursor.insertText("\n")
+
+            if not html_text.endswith('<br>') and not html_text.endswith('<br/>'):
+                cursor.insertText("\n")
             cursor.insertText(self.prompt + user_input)
             self.input_start_position = cursor.position() - len(user_input)
         else:
             cursor.insertHtml(html_text)
-            cursor.insertText("\n")
+            if not html_text.endswith('<br>') and not html_text.endswith('<br/>'):
+                cursor.insertText("\n")
         self.terminal_output.setTextCursor(cursor)
         self.terminal_output.ensureCursorVisible()
     def stop_process(self):

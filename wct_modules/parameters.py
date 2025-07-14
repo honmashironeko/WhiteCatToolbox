@@ -126,6 +126,7 @@ class ParameterEditDialog(QDialog):
         input_widget.setObjectName("field_input")
         input_widget.setPlaceholderText(placeholder)
         input_widget.setFixedHeight(s(32))
+        input_widget.setMinimumWidth(s(250))  # 设置输入框最小宽度
         input_widget.setFont(QFont(get_system_font(), s(9)))
         
         layout.addWidget(label_widget)
@@ -528,6 +529,7 @@ class ParameterEditDialog(QDialog):
         input_widget.setObjectName("field_input")
         input_widget.setPlaceholderText(placeholder)
         input_widget.setFixedHeight(s(44))
+        input_widget.setMinimumWidth(s(280))  # 设置输入框最小宽度
         input_widget.setFont(QFont(get_system_font(), s(10)))
         
         layout.addLayout(label_layout)
@@ -663,7 +665,8 @@ class ParameterWidget(QWidget):
             name_label = QLabel(label_text)
             name_label.setFont(QFont(get_system_font(), s(8), QFont.Bold))
             name_label.setWordWrap(True)  
-            name_label.setMinimumWidth(s(120))
+            name_label.setMinimumWidth(s(80))  # 减少标签最小宽度
+            name_label.setMaximumWidth(s(120))  # 设置标签最大宽度
             name_label.setSizePolicy(QSizePolicy.Preferred, QSizePolicy.Minimum)  
             
             label_style = f"""
@@ -689,11 +692,12 @@ class ParameterWidget(QWidget):
             tooltip = self.create_tooltip()
             if tooltip:
                 name_label.setToolTip(tooltip)
-            layout.addWidget(name_label)
+            layout.addWidget(name_label, 0)  # 不拉伸标签
             
             self.control = QLineEdit()
             self.control.setFont(QFont(get_system_font(), s(8)))
             self.control.setMinimumHeight(s(32))
+            self.control.setMinimumWidth(s(150))  # 设置输入框最小宽度
             self.control.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed)
             
             placeholder_text = t("input_value_placeholder")
@@ -735,7 +739,7 @@ class ParameterWidget(QWidget):
             if tooltip:
                 self.control.setToolTip(tooltip)
             
-        layout.addWidget(self.control)
+        layout.addWidget(self.control, 1)  # 给输入框更高的拉伸权重
         if param_type == '1':
             self.setMinimumHeight(s(36))  
             self.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Minimum)  
@@ -1165,7 +1169,7 @@ class ParameterSection(QWidget):
         main_group.setStyleSheet(get_parameter_section_style())
 
         section_content_layout = QVBoxLayout(main_group)
-        section_content_layout.setContentsMargins(s(12), s(25), s(12), s(12))
+        section_content_layout.setContentsMargins(s(8), s(25), s(8), s(12))  # 减少左右边距
         section_content_layout.setSpacing(s(8))
 
         search_widget = self.create_search_bar()
@@ -1595,7 +1599,7 @@ class ToolParameterTab(QWidget):
         
         content_widget = QWidget()
         layout = QVBoxLayout()
-        layout.setContentsMargins(s(16), s(16), s(16), s(16))
+        layout.setContentsMargins(s(8), s(16), s(8), s(16))  # 减少左右边距，让内容有更多空间
         layout.setSpacing(s(12))
         global_search_container = self.create_global_search_bar()
         layout.addWidget(global_search_container)
@@ -1675,13 +1679,15 @@ class ToolParameterTab(QWidget):
         search_icon = QLabel(t("global_search"))
         search_icon.setFont(QFont(fonts["system"], s(9), QFont.Bold))
         search_icon.setStyleSheet(f"color: {colors['text_secondary']}; border: none; background: transparent;")
-        search_icon.setMinimumWidth(s(80))
+        search_icon.setMinimumWidth(s(60))  # 减少搜索图标的宽度
+        search_icon.setMaximumWidth(s(100))  # 限制最大宽度
         search_icon.setSizePolicy(QSizePolicy.Preferred, QSizePolicy.Fixed)
         
         self.global_search_input = QLineEdit()
         self.global_search_input.setPlaceholderText(t("global_search_placeholder"))
         self.global_search_input.setFont(QFont(fonts["system"], s(10)))
         self.global_search_input.setMinimumHeight(s(36))
+        self.global_search_input.setMinimumWidth(s(200))  # 设置搜索输入框最小宽度
         self.global_search_input.textChanged.connect(self.on_global_search_changed)
         self.global_search_input.setStyleSheet(f"""
             QLineEdit {{

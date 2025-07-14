@@ -38,7 +38,7 @@ class MainWindow(QMainWindow):
         QTimer.singleShot(5000, self.promotion_update_manager.check_for_promotion_updates)
     def setup_ui(self):
         self.setWindowTitle(t("app_title"))
-        self.setGeometry(0, 0, 1200, 800)
+        self.setGeometry(0, 0, 1600, 900)
         icon_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "favicon.ico")
         if os.path.exists(icon_path):
             self.setWindowIcon(QIcon(icon_path))
@@ -67,7 +67,7 @@ class MainWindow(QMainWindow):
         self.right_stack.addTab(self.promotion_page, t("promotion"))
         main_splitter.addWidget(self.right_stack)
         main_splitter.setStretchFactor(0, 1)
-        main_splitter.setStretchFactor(1, 5)
+        main_splitter.setStretchFactor(1, 7)
         layout = QHBoxLayout()
         layout.setContentsMargins(int(params["main_margin"]), int(params["main_margin"]), int(params["main_margin"]), int(params["main_margin"]))
         layout.setSpacing(int(params["main_spacing"]))
@@ -266,9 +266,6 @@ class MainWindow(QMainWindow):
         else:
             self.right_stack.setCurrentIndex(0)
     def on_item_clicked(self, item):
-        """
-        当工具列表项被点击时，清除对应的警示状态
-        """
         tool_name = item.text()
         self.set_tool_list_item_alert(tool_name, alert=False)
     def clear_selection(self):
@@ -507,9 +504,6 @@ class MainWindow(QMainWindow):
         msg_box.setText(message)
         msg_box.exec()
     def switch_language(self):
-        """
-        切换语言
-        """
         current_lang = get_current_language()
         new_lang = "en_US" if current_lang == "zh_CN" else "zh_CN"
         try:
@@ -540,9 +534,6 @@ class MainWindow(QMainWindow):
                 f"Language switch failed: {str(e)}"
             )
     def set_tool_list_item_alert(self, tool_name, alert=True):
-        """
-        设置工具列表项的警示状态
-        """
         for i in range(self.tool_list.count()):
             item = self.tool_list.item(i)
             if item.text() == tool_name:
@@ -554,25 +545,16 @@ class MainWindow(QMainWindow):
                     item.setIcon(QIcon())
                 break
     def clear_all_tool_list_alerts(self):
-        """
-        清除所有工具列表项的警示状态
-        """
         for i in range(self.tool_list.count()):
             item = self.tool_list.item(i)
             item.setBackground(QBrush())
             item.setIcon(QIcon())
     def has_tool_list_alerts(self):
-        """
-        检查是否有工具列表项处于警示状态
-        """
         for i in range(self.tool_list.count()):
             item = self.tool_list.item(i)
             if not item.icon().isNull():
                 return True
         return False
     def check_for_updates(self):
-        """
-        手动检查更新
-        """
         if self.update_manager:
             self.update_manager.check_for_updates(show_no_update_message=True)

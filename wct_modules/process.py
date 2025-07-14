@@ -41,6 +41,11 @@ class ToolProcess(QProcess):
             '47': '#FFFFFF',
         }
         result = text
+        
+        result = result.replace('\r\n', '\n')
+        result = result.replace('\r', '\n')    
+        result = result.replace('\n', '<br>')  
+
         result = re.sub(r'\x1b\[0m', '</span>', result)
         result = re.sub(r'\x1b\[m', '</span>', result)
         result = re.sub(r'\x1b\[1m', '<span style="font-weight: bold;">', result)
@@ -72,7 +77,7 @@ class ToolProcess(QProcess):
     def handle_stdout(self):
         
         data = self.readAllStandardOutput()
-        stdout = bytes(data).decode("utf-8", errors="ignore")
+        stdout = str(data, encoding="utf-8", errors="ignore")
         if self.process_tab and hasattr(self.process_tab, 'append_output'):
 
             html_output = self.convert_ansi_to_html(stdout)
@@ -81,7 +86,7 @@ class ToolProcess(QProcess):
     def handle_stderr(self):
         
         data = self.readAllStandardError()
-        stderr = bytes(data).decode("utf-8", errors="ignore")
+        stderr = str(data, encoding="utf-8", errors="ignore")
         if self.process_tab and hasattr(self.process_tab, 'append_output'):
 
             html_output = self.convert_ansi_to_html(stderr)
