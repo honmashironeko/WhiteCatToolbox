@@ -18,6 +18,12 @@ if __name__ == "__main__":
         importlib.import_module("sitecustomize")
     except Exception:
         pass
+    
+    try:
+        from wct_modules.isatty_fix import apply_isatty_fix
+        apply_isatty_fix()
+    except Exception:
+        pass
 
     from wct_modules.styles import get_cross_platform_app_stylesheet
     from wct_modules.main_window import MainWindow

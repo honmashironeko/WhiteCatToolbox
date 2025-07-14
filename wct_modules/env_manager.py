@@ -16,7 +16,7 @@ class EnvironmentManager:
     
     def __init__(self, logger=None):
         self.logger = logger
-        self.is_frozen = hasattr(sys, 'frozen') and sys.frozen
+        self.is_frozen = hasattr(sys, 'frozen') and getattr(sys, 'frozen', False)
         self.system_python_path = None
         self.manual_python_path = None
         self._init_system_python()
@@ -218,6 +218,7 @@ class EnvironmentManager:
     
     def create_subprocess_wrapper(self, tool_path, user_command, params, venv_path=None, custom_env_str=None):
         from .utils import build_cross_platform_command
+        from .isatty_fix import get_python_command_with_isatty_fix
         
 
         command = build_cross_platform_command(tool_path, user_command, params)
@@ -235,6 +236,7 @@ class EnvironmentManager:
             if os.path.exists(venv_python) and command[0] in [self.get_effective_python_path(), "python", "python3", "python.exe"]:
                 command[0] = venv_python
         
+        command = get_python_command_with_isatty_fix(command)
 
         custom_env = {}
         

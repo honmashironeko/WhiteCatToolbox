@@ -1,10 +1,11 @@
 {
-    "ui_settings": {
-        "scale_factor": 1.5,
-        "theme": "default",
-        "language": "zh_CN"
-    },
-    "tool_history": {
-        "sqlmap-master": ""
-    }
+  "ui_settings": {
+    "scale_factor": 1.5,
+    "theme": "default",
+    "language": "zh_CN"
+  },
+  "system_settings": {
+    "enable_isatty_fix": true,
+    "isatty_fix_mode": "auto"
+  }
 }
