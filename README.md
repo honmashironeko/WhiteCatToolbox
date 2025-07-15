@@ -1,6 +1,5 @@
 # 🐱 WhiteCat Toolbox - 白猫工具箱
 
-<div align="center">
 
 ![Logo](favicon.ico)
 
