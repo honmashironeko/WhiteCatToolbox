@@ -182,7 +182,7 @@ class ProcessTab(QWidget):
         layout.addWidget(self.current_match_display)
         self.terminal_output = TerminalTextEdit(self)
         self.terminal_output.setFont(QFont(fonts["monospace"], s(9)))
-        self.terminal_output.setMinimumHeight(s(600))  # 增加终端显示区域的最小高度  
+        self.terminal_output.setMinimumHeight(s(600))
         terminal_style = f"""
             QTextEdit {{
                 background: qlineargradient(x1: 0, y1: 0, x2: 0, y2: 1,
@@ -223,7 +223,7 @@ class ProcessTab(QWidget):
         self.search_input = QLineEdit()
         self.search_input.setPlaceholderText(t("search_content_placeholder"))
         self.search_input.setMinimumHeight(s(24))
-        self.search_input.setMinimumWidth(s(180))  # 设置搜索输入框最小宽度
+        self.search_input.setMinimumWidth(s(180))
         self.search_input.setStyleSheet(f"""
             QLineEdit {{
                 background-color: {colors["white"]};
@@ -683,6 +683,20 @@ class ProcessTab(QWidget):
     def clear_terminal(self):
         self.terminal_output.clear()
         self.show_prompt()
+    
+    def reset_status_to_running(self):
+        
+        self.status_label.setText(t("running"))
+        self.status_label.setStyleSheet(f"""
+            QLabel {{
+                color: {colors["success"]};
+                background: transparent;
+                border: none;
+                padding: {s(2)}px {s(6)}px;
+                font-weight: bold;
+            }}
+        """)
+    
     def copy_selection(self):
         cursor = self.terminal_output.textCursor()
         if cursor.hasSelection():

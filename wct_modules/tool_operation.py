@@ -3,7 +3,7 @@ import json
 from PySide6.QtWidgets import (
     QWidget, QVBoxLayout, QHBoxLayout, QLabel, QPushButton,
     QTabWidget, QLineEdit, QComboBox, 
-    QSplitter, QDialog, QCheckBox, QSizePolicy, QMessageBox, QScrollArea
+    QSplitter, QDialog, QCheckBox, QSizePolicy, QMessageBox, QScrollArea, QFileDialog
 )
 from PySide6.QtCore import Qt, QTimer
 from PySide6.QtGui import QFont, QIcon
@@ -28,27 +28,30 @@ class ToolOperationPage(QWidget):
         self.tool_name = tool_name
         self.config_data = None
         self.processes = []
-        self.command_history = {}  
+        self.command_history = {}
+
+        self.env_manager = None
         self.setup_ui()
+
+        from .env_manager import EnvironmentManager
+        self.env_manager = EnvironmentManager(self.system_log_tab)
         self.load_config()
         self.load_command_history()
         self.load_env_config()
     
     def setup_ui(self):
-        
-        # 创建滚动区域来支持水平滚动
+
         scroll_area = QScrollArea()
         scroll_area.setWidgetResizable(True)
         scroll_area.setHorizontalScrollBarPolicy(Qt.ScrollBarAsNeeded)
         scroll_area.setVerticalScrollBarPolicy(Qt.ScrollBarAsNeeded)
         scroll_area.setStyleSheet("QScrollArea { border: none; background: transparent; }")
-        
-        # 创建可滚动的内容容器
+
         content_widget = QWidget()
-        content_widget.setMinimumWidth(s(1200))  # 设置更大的最小宽度，允许超出屏幕
+        content_widget.setMinimumWidth(s(1200))
         
         main_splitter = QSplitter(Qt.Horizontal)
-        main_splitter.setChildrenCollapsible(False)  # 防止区域被完全折叠
+        main_splitter.setChildrenCollapsible(False)
 
         left_widget = self.create_parameter_page()
         main_splitter.addWidget(left_widget)
@@ -56,60 +59,53 @@ class ToolOperationPage(QWidget):
         right_widget = self.create_runtime_page()
         main_splitter.addWidget(right_widget)
 
-        # 设置更宽松的初始大小比例
         main_splitter.setStretchFactor(0, 1)
         main_splitter.setStretchFactor(1, 1)
-        
-        # 设置合理的默认分割位置，不限制最大宽度
+
         QTimer.singleShot(0, lambda: self.adjust_splitter_sizes(main_splitter))
-        
-        # 将分割器放入内容容器
+
         content_layout = QHBoxLayout()
         content_layout.setContentsMargins(0, 0, 0, 0)
         content_layout.addWidget(main_splitter)
         content_widget.setLayout(content_layout)
-        
-        # 将内容容器放入滚动区域
+
         scroll_area.setWidget(content_widget)
-        
-        # 主布局
+
         layout = QHBoxLayout()
         layout.setContentsMargins(0, 0, 0, 0)
         layout.addWidget(scroll_area)
         self.setLayout(layout)
     
     def adjust_splitter_sizes(self, splitter):
-        """调整分割器的初始尺寸"""
+        
         try:
-            # 获取内容容器的宽度而不是splitter的宽度
+
             content_widget = splitter.parent()
             if content_widget:
                 total_width = content_widget.minimumWidth()
             else:
-                total_width = 1200  # 默认宽度
+                total_width = 1200
                 
             if total_width > 0:
-                # 计算参数区的合适宽度
+
                 left_widget = splitter.widget(0)
                 if left_widget:
-                    # 获取参数区的建议宽度
+
                     size_hint = left_widget.sizeHint()
                     preferred_width = size_hint.width() if size_hint.width() > 0 else 600
-                    
-                    # 允许更大的参数区宽度，不限制在屏幕范围内
-                    max_param_width = max(preferred_width, 600)  # 至少600px
-                    param_width = min(max_param_width, int(total_width * 0.5))  # 最多占50%
-                    
-                    # 终端区获得剩余宽度
+
+                    max_param_width = max(preferred_width, 600)
+                    param_width = min(max_param_width, int(total_width * 0.5))
+
                     terminal_width = total_width - param_width
                     
                     splitter.setSizes([param_width, terminal_width])
                 else:
-                    # 如果无法获取左侧组件，使用默认的 1:1 比例
+
                     half_width = total_width // 2
                     splitter.setSizes([half_width, half_width])
         except Exception as e:
-            # 如果出现异常，保持默认行为
+
             print(f"调整分割器尺寸时出错: {e}")
             pass
     
@@ -123,7 +119,7 @@ class ToolOperationPage(QWidget):
             }}
         """)
         layout = QVBoxLayout()
-        layout.setContentsMargins(s(8), s(16), s(8), s(16))  # 减少左右边距
+        layout.setContentsMargins(s(8), s(16), s(8), s(16))
         layout.setSpacing(s(12))
 
         top_widget = QWidget()
@@ -287,6 +283,83 @@ class ToolOperationPage(QWidget):
         venv_env_layout = QHBoxLayout()
         venv_env_layout.setContentsMargins(s(8), s(8), s(8), s(8))
         venv_env_layout.setSpacing(s(12))
+
+        python_column = QWidget()
+        python_column.setMinimumWidth(s(180))
+        python_column_layout = QVBoxLayout()
+        python_column_layout.setContentsMargins(0, 0, 0, 0)
+        python_column_layout.setSpacing(s(4))
+
+        python_label_widget = QWidget()
+        python_label_layout = QHBoxLayout()
+        python_label_layout.setContentsMargins(0, 0, 0, 0)
+        python_label_layout.setSpacing(s(12))
+        
+        python_label = QLabel(t("python_interpreter"))
+        python_label.setFont(QFont(fonts["system"], s(9), QFont.Bold))
+        python_label.setStyleSheet(f"color: {colors['text_secondary']}; background: transparent; border: none;")
+        python_label.setMinimumWidth(s(140))
+        python_label.setWordWrap(False)
+        
+        self.python_browse_btn = QPushButton(t("browse_python"))
+        self.python_browse_btn.setMinimumHeight(s(24))
+        self.python_browse_btn.setFixedWidth(s(50))
+        self.python_browse_btn.setStyleSheet(f"""
+            QPushButton {{
+                background-color: transparent;
+                border: 1px solid {colors["background_gray"]};
+                border-radius: {params["border_radius_very_small"]};
+                padding: {s(4)}px {s(4)}px;
+                color: {colors["text_secondary"]};
+                font-size: {s(8)}pt;
+                font-weight: 500;
+            }}
+            QPushButton:hover {{
+                background-color: {colors["secondary"]};
+                color: white;
+                border-color: {colors["secondary"]};
+            }}
+            QPushButton:pressed {{
+                background-color: {colors["secondary_pressed"]};
+            }}
+        """)
+        self.python_browse_btn.clicked.connect(self.browse_python_path)
+        
+        python_label_layout.addWidget(python_label, 1)
+        python_label_layout.addStretch()
+        python_label_layout.addWidget(self.python_browse_btn, 0)
+        python_label_widget.setLayout(python_label_layout)
+
+        self.python_input = QLineEdit()
+        self.python_input.setMinimumHeight(s(36))
+        self.python_input.setMinimumWidth(s(200))
+        self.python_input.setPlaceholderText(t("python_interpreter_placeholder"))
+        self.python_input.setToolTip(t("python_interpreter_tooltip"))
+        self.python_input.setContentsMargins(0, 0, 0, 0)
+        self.python_input.setStyleSheet(f"""
+            QLineEdit {{
+                background-color: {colors["main_background_start"]};
+                border: 1px solid {colors["background_gray"]};
+                border-radius: {params["border_radius_very_small"]};
+                padding: {s(8)}px {s(10)}px;
+                color: {colors["text_secondary"]};
+                font-size: {s(9)}pt;
+                selection-background-color: {colors["secondary"]};
+                text-align: left;
+            }}
+            QLineEdit:focus {{
+                border-color: {colors["secondary"]};
+                background-color: {colors["white"]};
+            }}
+            QLineEdit:hover {{
+                border-color: #ced4da;
+            }}
+        """)
+        
+        python_column_layout.addWidget(python_label_widget)
+        python_column_layout.addWidget(self.python_input)
+        python_column.setLayout(python_column_layout)
+
         venv_column = QWidget()
         venv_column_layout = QVBoxLayout()
         venv_column_layout.setContentsMargins(0, 0, 0, 0)
@@ -297,7 +370,7 @@ class ToolOperationPage(QWidget):
         venv_label.setStyleSheet(f"color: {colors['text_secondary']}; background: transparent; border: none;")
         self.venv_input = QLineEdit()
         self.venv_input.setMinimumHeight(s(32))
-        self.venv_input.setMinimumWidth(s(200))  # 设置输入框最小宽度
+        self.venv_input.setMinimumWidth(s(200))
         self.venv_input.setPlaceholderText(t("venv_placeholder"))
         self.venv_input.setToolTip(t("venv_tooltip"))
         self.venv_input.setStyleSheet(f"""
@@ -331,7 +404,7 @@ class ToolOperationPage(QWidget):
         env_label.setStyleSheet(f"color: {colors['text_secondary']}; background: transparent; border: none;")
         self.env_input = QLineEdit()
         self.env_input.setMinimumHeight(s(32))
-        self.env_input.setMinimumWidth(s(200))  # 设置输入框最小宽度
+        self.env_input.setMinimumWidth(s(200))
         self.env_input.setPlaceholderText(t("env_placeholder"))
         self.env_input.setToolTip(t("env_tooltip"))
         self.env_input.setStyleSheet(f"""
@@ -355,11 +428,15 @@ class ToolOperationPage(QWidget):
         env_column_layout.addWidget(env_label)
         env_column_layout.addWidget(self.env_input)
         env_column.setLayout(env_column_layout)
+
+        venv_env_layout.addWidget(python_column)
         venv_env_layout.addWidget(venv_column)
         venv_env_layout.addWidget(env_column)
         
         venv_env_widget.setLayout(venv_env_layout)
         layout.addWidget(venv_env_widget)
+
+        self.python_input.textChanged.connect(self.save_env_config)
         self.venv_input.textChanged.connect(self.save_env_config)
         self.env_input.textChanged.connect(self.save_env_config)
         self.param_tabs = QTabWidget()
@@ -422,9 +499,8 @@ class ToolOperationPage(QWidget):
         self.param_tabs.setCornerWidget(corner_widget, Qt.TopRightCorner)
 
         layout.addWidget(self.param_tabs)
-        
-        # 设置参数区的合理最小宽度，确保能完全展示内容
-        widget.setMinimumWidth(s(600))  # 增加最小宽度，允许更多内容展示
+
+        widget.setMinimumWidth(s(600))
         
         widget.setLayout(layout)
         return widget
@@ -439,7 +515,7 @@ class ToolOperationPage(QWidget):
             }
         """)
         layout = QVBoxLayout()
-        layout.setContentsMargins(s(8), s(16), s(8), s(16))  # 减少左右边距
+        layout.setContentsMargins(s(8), s(16), s(8), s(16))
         layout.setSpacing(s(8))
 
         self.process_tabs = EditableTabWidget()
@@ -507,9 +583,8 @@ class ToolOperationPage(QWidget):
             }}
         """)
         layout.addWidget(self.process_tabs)
-        
-        # 设置终端回显区的最小宽度与参数区相同
-        widget.setMinimumWidth(s(600))  # 与参数区相同的最小宽度，允许更大范围
+
+        widget.setMinimumWidth(s(600))
         
         widget.setLayout(layout)
         return widget
@@ -599,56 +674,26 @@ class ToolOperationPage(QWidget):
 
                 process_tab.clear_terminal()
 
+                if hasattr(process_tab, 'reset_status_to_running'):
+                    process_tab.reset_status_to_running()
+
         process_tab.append_system_log(f"{t('start_tool')}: {self.tool_name}", "info")
         process_tab.append_system_log(f"{t('execute_command')}: {' '.join(command)}", "info")
         process_tab.append_system_log(t("interact_below"), "info")
 
         venv_path = self.venv_input.text().strip()
         custom_env = self.env_input.text().strip()
-        env = os.environ.copy()
 
-        if venv_path:
-
-            if os.name == "nt":
-                venv_bin = os.path.join(venv_path, "Scripts")
-            else:
-                venv_bin = os.path.join(venv_path, "bin")
-            env["PATH"] = venv_bin + os.pathsep + env.get("PATH", "")
-            env["VIRTUAL_ENV"] = venv_path
-
-        if custom_env:
-            for pair in custom_env.split(";"):
-                if "=" in pair:
-                    k, v = pair.split("=", 1)
-                    k = k.strip()
-                    v = v.strip()
-
-                    if k.upper() == "PATH":
-                        if "%PATH%" in v:
-                            v = v.replace("%PATH%", env.get("PATH", ""))
-                        if "$PATH" in v:
-                            v = v.replace("$PATH", env.get("PATH", ""))
-                        env["PATH"] = v
-                    else:
-                        env[k] = v
-
-        if venv_path and command[0] in ["python", "python3"]:
-            if os.name == "nt":
-                venv_python = os.path.join(venv_path, "Scripts", "python.exe")
-            else:
-                venv_python = os.path.join(venv_path, "bin", "python")
-            if os.path.exists(venv_python):
-                command[0] = venv_python
-            else:
-                self.system_log_tab.append_system_log(f"{t('venv_python_not_found')}: {venv_python}", "warning")
-        
-        # 应用 isatty 修复到命令
-        from .isatty_fix import get_python_command_with_isatty_fix
-        command = get_python_command_with_isatty_fix(command)
+        command, env = self.env_manager.create_subprocess_wrapper(
+            tool_path, user_command, params, venv_path, custom_env
+        )
         
         process = ToolProcess(self, process_tab)
         process_tab.process = process
         process.setEnvironment([f"{k}={v}" for k, v in env.items()])
+
+        process.setWorkingDirectory(tool_path)
+        
         process.start(command[0], command[1:])
 
         process_tab.show_prompt()
@@ -793,16 +838,17 @@ class ToolOperationPage(QWidget):
         if current_index != -1 and current_index < self.param_tabs.count():
             self.param_tabs.setCurrentIndex(current_index)
     
-    def save_config_to_file(self):
+    def save_config_to_file(self, silent=False):
         
         try:
             config_path = os.path.join("tools", self.tool_name, "wct_config.txt")
 
-            backup_path = config_path + ".bak"
-            if os.path.exists(config_path):
-                import shutil
-                shutil.copy2(config_path, backup_path)
-                self.system_log_tab.append_system_log(f"{t('config_backup_to')}: {backup_path}", "info")
+            if not silent:
+                backup_path = config_path + ".bak"
+                if os.path.exists(config_path):
+                    import shutil
+                    shutil.copy2(config_path, backup_path)
+                    self.system_log_tab.append_system_log(f"{t('config_backup_to')}: {backup_path}", "info")
 
             with open(config_path, 'w', encoding='utf-8') as f:
                 
@@ -814,8 +860,9 @@ class ToolOperationPage(QWidget):
                 if "全部参数" in self.config_data:
                     f.write(f"%{t('all_params')}\n")
                     self._write_section_to_file(f, self.config_data["全部参数"])
-            
-            self.system_log_tab.append_system_log(f"{t('config_saved_to')}: {config_path}", "success")
+
+            if not silent:
+                self.system_log_tab.append_system_log(f"{t('config_saved_to')}: {config_path}", "success")
             
         except Exception as e:
             self.system_log_tab.append_system_log(f"{t('save_config_failed')}: {e}", "error")
@@ -958,10 +1005,15 @@ class ToolOperationPage(QWidget):
     def update_parameter_in_config(self, old_param_name, new_param_info):
         
         try:
+
+            if not self.config_data:
+                self.system_log_tab.append_system_log(f"{t('config_data_not_loaded')}", "error")
+                return
             
             param_type = new_param_info['type']
             subsection = "勾选项区" if param_type == '1' else "输入框区"
 
+            updated = False
             for section_name in ["常用参数", "全部参数"]:
                 if section_name in self.config_data:
                     for subsection_name in ["勾选项区", "输入框区"]:
@@ -980,17 +1032,26 @@ class ToolOperationPage(QWidget):
                                     else:
                                         
                                         params_list[i] = new_param_info.copy()
+                                    updated = True
                                     break
             
-            self.save_and_reload_ui()
-            
-            self.system_log_tab.append_system_log(
-                f"{t('parameter')} '{new_param_info['display_name']}' {t('info_updated')}", 
-                "success"
-            )
+            if updated:
+
+                self.save_config_to_file(silent=True)
+                self.system_log_tab.append_system_log(
+                    f"{t('parameter')} '{new_param_info['display_name']}' {t('info_updated')}", 
+                    "success"
+                )
+            else:
+                self.system_log_tab.append_system_log(
+                    f"{t('parameter')} '{old_param_name}' {t('not_found_in_config')}", 
+                    "warning"
+                )
             
         except Exception as e:
             self.system_log_tab.append_system_log(f"{t('update_param_info_failed')}: {e}", "error")
+            import traceback
+            self.system_log_tab.append_system_log(f"{t('detailed_error')}: {traceback.format_exc()}", "error")
     
     def remove_parameter_from_common(self, param_info):
         
@@ -1394,7 +1455,7 @@ class ToolOperationPage(QWidget):
         input_edit.setText(default_text)
         input_edit.setFont(QFont("Microsoft YaHei", s(11)))
         input_edit.setMinimumHeight(s(44))
-        input_edit.setMinimumWidth(s(350))  # 设置输入框最小宽度
+        input_edit.setMinimumWidth(s(350))
         input_edit.setStyleSheet(f"""
             QLineEdit {{
                 background-color: #f2f2f7;
@@ -1603,7 +1664,7 @@ class ToolOperationPage(QWidget):
         
         tool_env_path = os.path.join("tools", self.tool_name, "env_config.json")
         global_env_path = "global_env_config.json"
-        config = {"venv_path": "", "custom_env": ""}
+        config = {"python_path": "", "venv_path": "", "custom_env": ""}
         if os.path.exists(tool_env_path):
             try:
                 with open(tool_env_path, "r", encoding="utf-8") as f:
@@ -1618,13 +1679,35 @@ class ToolOperationPage(QWidget):
                     config.update(data)
             except Exception as e:
                 print(f"[DEBUG] {t('debug_failed_read_global_env')}: {e}")
+
+        python_path = config.get("python_path", "")
+
+        if self.env_manager:
+            auto_detected = self.env_manager.get_auto_detected_python_path()
+            self.python_input.setPlaceholderText(auto_detected)
+
+            if not python_path:
+                python_path = auto_detected
+                
+        self.python_input.setText(python_path)
+        if python_path:
+            self.env_manager.set_manual_python_path(python_path)
+        
         self.venv_input.setText(config.get("venv_path", ""))
         self.env_input.setText(config.get("custom_env", ""))
 
     def save_env_config(self):
         
         tool_env_path = os.path.join("tools", self.tool_name, "env_config.json")
+
+        python_path = self.python_input.text().strip()
+        if python_path:
+            self.env_manager.set_manual_python_path(python_path)
+        else:
+            self.env_manager.reset_manual_python_path()
+        
         config = {
+            "python_path": python_path,
             "venv_path": self.venv_input.text().strip(),
             "custom_env": self.env_input.text().strip()
         }
@@ -1633,3 +1716,34 @@ class ToolOperationPage(QWidget):
                 json.dump(config, f, ensure_ascii=False, indent=2)
         except Exception as e:
             print(f"[DEBUG] {t('save_config_failed')} env_config.json: {e}")
+
+    def browse_python_path(self):
+        
+        file_dialog = QFileDialog()
+        file_dialog.setWindowTitle(t("select_python_path"))
+        file_dialog.setFileMode(QFileDialog.ExistingFile)
+
+        if os.name == 'nt':
+            file_dialog.setNameFilter(t("python_executable"))
+        else:
+            file_dialog.setNameFilter("Python Executable (python*);;All Files (*)")
+        
+        if file_dialog.exec():
+            selected_files = file_dialog.selectedFiles()
+            if selected_files:
+                python_path = selected_files[0]
+
+                if self.env_manager.set_manual_python_path(python_path):
+                    self.python_input.setText(python_path)
+                    if self.system_log_tab:
+                        self.system_log_tab.append_system_log(
+                            f"{t('python_path_updated')}: {python_path}", 
+                            "success"
+                        )
+                else:
+
+                    QMessageBox.warning(
+                        self, 
+                        t("python_path_invalid"), 
+                        f"{t('python_test_failed')}: {python_path}"
+                    )

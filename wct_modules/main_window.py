@@ -398,7 +398,7 @@ class MainWindow(QMainWindow):
                             backup_zip.write(file_path_full, arcname)
                 backup_info = {
                     "backup_time": datetime.datetime.now().isoformat(),
-                    "version": "v0.0.4_beta",
+                    "version": "v0.0.5",
                     "description": t("backup_description"),
                     "includes": [
                         "templates/",

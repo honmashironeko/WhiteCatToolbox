@@ -20,6 +20,12 @@ class ParameterEditDialog(QDialog):
     def __init__(self, param_info, parent=None):
         super().__init__(parent)
         self.param_info = param_info.copy()
+
+        self.name_edit = None
+        self.display_edit = None
+        self.desc_edit = None
+        self.type_combo = None
+        self.required_checkbox = None
         self.setup_ui()
         
     def setup_ui(self):
@@ -53,18 +59,21 @@ class ParameterEditDialog(QDialog):
         layout.addLayout(header_layout)
         form_layout = QVBoxLayout()
         form_layout.setSpacing(s(16))
-        self.name_edit = self.create_simple_field(
+
+        name_container = self.create_simple_field(
             t("param_name_label"), 
             self.param_info.get('param_name', ''),
             "--output-file"
         )
-        form_layout.addWidget(self.name_edit)
-        self.display_edit = self.create_simple_field(
+        form_layout.addWidget(name_container)
+        
+        display_container = self.create_simple_field(
             t("display_name_label"), 
             self.param_info.get('display_name', ''),
             "Output File"
         )
-        form_layout.addWidget(self.display_edit)
+        form_layout.addWidget(display_container)
+        
         desc_container = self.create_textarea_field(
             t("param_desc_label"),
             self.param_info.get('description', ''),
@@ -126,14 +135,16 @@ class ParameterEditDialog(QDialog):
         input_widget.setObjectName("field_input")
         input_widget.setPlaceholderText(placeholder)
         input_widget.setFixedHeight(s(32))
-        input_widget.setMinimumWidth(s(250))  # 设置输入框最小宽度
+        input_widget.setMinimumWidth(s(250))
         input_widget.setFont(QFont(get_system_font(), s(9)))
         
         layout.addWidget(label_widget)
         layout.addWidget(input_widget)
-        if "param_name" in label:
+
+        label_text = label.lower()
+        if "param_name" in label_text or "参数名" in label_text:
             self.name_edit = input_widget
-        elif "display_name" in label:
+        elif "display_name" in label_text or "显示名" in label_text:
             self.display_edit = input_widget
             
         return container
@@ -177,6 +188,7 @@ class ParameterEditDialog(QDialog):
         self.type_combo.setCurrentIndex(current_index)
         self.type_combo.setFixedHeight(s(32))
         self.type_combo.setFont(QFont(get_system_font(), s(9)))
+        self.type_combo.setStyleSheet("")
         
         layout.addWidget(label_widget)
         layout.addWidget(self.type_combo)
@@ -263,10 +275,11 @@ class ParameterEditDialog(QDialog):
                 background: {colors["white"]};
                 border: 1px solid {colors["border_light"]};
                 border-radius: {params["border_radius_small"]};
-                padding: {s(6)}px {s(12)}px;
+                padding: {s(8)}px {s(10)}px;
                 color: {colors["text"]};
-                font-weight: 500;
-                min-height: {s(20)}px;
+                font-size: {s(9)}pt;
+                font-weight: normal;
+                min-height: {s(16)}px;
             }}
             
             QComboBox#field_combo:hover {{
@@ -323,8 +336,9 @@ class ParameterEditDialog(QDialog):
                 background: transparent;
                 border: none;
                 border-radius: {params["border_radius_very_small"]};
-                padding: {s(6)}px {s(10)}px;
+                padding: {s(8)}px {s(10)}px;
                 margin: {s(1)}px;
+                font-size: {s(9)}pt;
             }}
             
             QComboBox#field_combo QAbstractItemView::item:hover {{
@@ -529,7 +543,7 @@ class ParameterEditDialog(QDialog):
         input_widget.setObjectName("field_input")
         input_widget.setPlaceholderText(placeholder)
         input_widget.setFixedHeight(s(44))
-        input_widget.setMinimumWidth(s(280))  # 设置输入框最小宽度
+        input_widget.setMinimumWidth(s(280))
         input_widget.setFont(QFont(get_system_font(), s(10)))
         
         layout.addLayout(label_layout)
@@ -542,14 +556,21 @@ class ParameterEditDialog(QDialog):
         return container
     
     def save_and_close(self):
-        
+
+        if not self.name_edit or not self.display_edit:
+            QMessageBox.warning(self, t("warning"), t("controls_not_initialized"))
+            return
+            
         if not self.name_edit.text().strip() or not self.display_edit.text().strip():
             QMessageBox.warning(self, t("warning"), t("warning_empty_name"))
             return
         self.accept()
     
     def get_param_info(self):
-        
+
+        if not all([self.name_edit, self.display_edit, self.desc_edit, self.type_combo, self.required_checkbox]):
+            return self.param_info.copy()
+            
         return {
             'param_name': self.name_edit.text().strip(),
             'display_name': self.display_edit.text().strip(),
@@ -665,8 +686,8 @@ class ParameterWidget(QWidget):
             name_label = QLabel(label_text)
             name_label.setFont(QFont(get_system_font(), s(8), QFont.Bold))
             name_label.setWordWrap(True)  
-            name_label.setMinimumWidth(s(80))  # 减少标签最小宽度
-            name_label.setMaximumWidth(s(120))  # 设置标签最大宽度
+            name_label.setMinimumWidth(s(80))
+            name_label.setMaximumWidth(s(120))
             name_label.setSizePolicy(QSizePolicy.Preferred, QSizePolicy.Minimum)  
             
             label_style = f"""
@@ -692,12 +713,12 @@ class ParameterWidget(QWidget):
             tooltip = self.create_tooltip()
             if tooltip:
                 name_label.setToolTip(tooltip)
-            layout.addWidget(name_label, 0)  # 不拉伸标签
+            layout.addWidget(name_label, 0)
             
             self.control = QLineEdit()
             self.control.setFont(QFont(get_system_font(), s(8)))
             self.control.setMinimumHeight(s(32))
-            self.control.setMinimumWidth(s(150))  # 设置输入框最小宽度
+            self.control.setMinimumWidth(s(150))
             self.control.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed)
             
             placeholder_text = t("input_value_placeholder")
@@ -739,7 +760,7 @@ class ParameterWidget(QWidget):
             if tooltip:
                 self.control.setToolTip(tooltip)
             
-        layout.addWidget(self.control, 1)  # 给输入框更高的拉伸权重
+        layout.addWidget(self.control, 1)
         if param_type == '1':
             self.setMinimumHeight(s(36))  
             self.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Minimum)  
@@ -932,17 +953,42 @@ class ParameterWidget(QWidget):
     def edit_parameter(self):
         
         old_param_name = self.param_info.get('param_name')
+        old_param_info = self.param_info.copy()
         dialog = ParameterEditDialog(self.param_info, self)
         if dialog.exec() == QDialog.Accepted:
-            self.param_info = dialog.get_param_info()
-            self.update_ui_from_param_info()
-            section = self.get_section()
-            if section:
-                tool_page = section.get_tool_operation_page()
-                if tool_page and hasattr(tool_page, 'update_parameter_in_config'):
-                    tool_page.update_parameter_in_config(old_param_name, self.param_info)
-                if tool_page and hasattr(tool_page, 'save_and_reload_ui'):
-                    tool_page.save_and_reload_ui()
+            new_param_info = dialog.get_param_info()
+            if new_param_info:
+
+                params_changed = False
+                for key in ['param_name', 'display_name', 'description', 'type', 'required']:
+                    if old_param_info.get(key) != new_param_info.get(key):
+                        params_changed = True
+                        break
+                
+                if params_changed:
+                    self.param_info.update(new_param_info)
+
+                    self.update_ui_from_param_info()
+
+                    section = self.get_section()
+                    if section:
+                        tool_page = section.get_tool_operation_page()
+                        if tool_page and hasattr(tool_page, 'sync_required_status'):
+
+                            from PySide6.QtCore import QTimer
+                            QTimer.singleShot(50, lambda: tool_page.sync_required_status(self.param_info['param_name'], self.param_info.get('required', False)))
+
+                        if tool_page and hasattr(tool_page, 'update_parameter_in_config'):
+
+                            from PySide6.QtCore import QTimer
+                            QTimer.singleShot(100, lambda: tool_page.update_parameter_in_config(old_param_name, self.param_info))
+                else:
+
+                    section = self.get_section()
+                    if section:
+                        tool_page = section.get_tool_operation_page()
+                        if tool_page and hasattr(tool_page, 'system_log_tab'):
+                            tool_page.system_log_tab.append_system_log(t("param_no_changes"), "info")
     
     def toggle_required(self):
         
@@ -957,6 +1003,50 @@ class ParameterWidget(QWidget):
                 tool_page.save_and_reload_ui()
     
     def update_ui_from_param_info(self):
+
+        try:
+            current_type = self.param_info.get('type', '1')
+
+            if hasattr(self, '_last_type') and self._last_type != current_type:
+                self._last_type = current_type
+                self._rebuild_ui()
+                return
+
+            self._last_type = current_type
+
+            tooltip_text = self.create_tooltip()
+            
+            if current_type == '1':
+                if hasattr(self, 'control') and self.control:
+                    display_text = self.param_info.get('display_name', '')
+                    self.control.setText(display_text)
+                    self.control.setToolTip(tooltip_text)
+            elif current_type == '2':
+
+                layout = self.layout()
+                if layout:
+                    for i in range(layout.count()):
+                        item = layout.itemAt(i)
+                        if item and item.widget():
+                            widget = item.widget()
+                            if isinstance(widget, QLabel) and hasattr(widget, 'text'):
+
+                                label_text = self.param_info.get('display_name', '') + ":"
+                                widget.setText(label_text)
+                                widget.setToolTip(tooltip_text)
+                                break
+
+                if hasattr(self, 'control') and self.control:
+                    self.control.setToolTip(tooltip_text)
+
+            self.update_required_style()
+            
+        except Exception as e:
+
+            print(f"优化更新失败，回退到完全重建: {e}")
+            self._rebuild_ui()
+    
+    def _rebuild_ui(self):
         
         old_layout = self.layout()
         if old_layout:
@@ -964,7 +1054,6 @@ class ParameterWidget(QWidget):
                 child = old_layout.takeAt(0)
                 if child.widget():
                     child.widget().deleteLater()
-                    
         self.setup_ui()
         
     def get_value(self):
@@ -1169,7 +1258,7 @@ class ParameterSection(QWidget):
         main_group.setStyleSheet(get_parameter_section_style())
 
         section_content_layout = QVBoxLayout(main_group)
-        section_content_layout.setContentsMargins(s(8), s(25), s(8), s(12))  # 减少左右边距
+        section_content_layout.setContentsMargins(s(8), s(25), s(8), s(12))
         section_content_layout.setSpacing(s(8))
 
         search_widget = self.create_search_bar()
@@ -1599,7 +1688,7 @@ class ToolParameterTab(QWidget):
         
         content_widget = QWidget()
         layout = QVBoxLayout()
-        layout.setContentsMargins(s(8), s(16), s(8), s(16))  # 减少左右边距，让内容有更多空间
+        layout.setContentsMargins(s(8), s(16), s(8), s(16))
         layout.setSpacing(s(12))
         global_search_container = self.create_global_search_bar()
         layout.addWidget(global_search_container)
@@ -1679,15 +1768,15 @@ class ToolParameterTab(QWidget):
         search_icon = QLabel(t("global_search"))
         search_icon.setFont(QFont(fonts["system"], s(9), QFont.Bold))
         search_icon.setStyleSheet(f"color: {colors['text_secondary']}; border: none; background: transparent;")
-        search_icon.setMinimumWidth(s(60))  # 减少搜索图标的宽度
-        search_icon.setMaximumWidth(s(100))  # 限制最大宽度
+        search_icon.setMinimumWidth(s(60))
+        search_icon.setMaximumWidth(s(100))
         search_icon.setSizePolicy(QSizePolicy.Preferred, QSizePolicy.Fixed)
         
         self.global_search_input = QLineEdit()
         self.global_search_input.setPlaceholderText(t("global_search_placeholder"))
         self.global_search_input.setFont(QFont(fonts["system"], s(10)))
         self.global_search_input.setMinimumHeight(s(36))
-        self.global_search_input.setMinimumWidth(s(200))  # 设置搜索输入框最小宽度
+        self.global_search_input.setMinimumWidth(s(200))
         self.global_search_input.textChanged.connect(self.on_global_search_changed)
         self.global_search_input.setStyleSheet(f"""
             QLineEdit {{

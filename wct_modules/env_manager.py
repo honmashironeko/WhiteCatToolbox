@@ -1,3 +1,8 @@
+"""
+Environment Manager for WhiteCat Toolbox
+Handles Python environment isolation for packaged executables
+"""
+
 import os
 import sys
 import subprocess
@@ -54,6 +59,33 @@ class EnvironmentManager:
             
 
         return sys.executable
+    
+    def get_current_python_display_path(self):
+        
+        if self.manual_python_path and os.path.exists(self.manual_python_path):
+            if self._test_python_executable(self.manual_python_path):
+                return self.manual_python_path
+            else:
+
+                return ""
+        
+
+        return ""
+    
+    def get_auto_detected_python_path(self):
+        
+        if self.system_python_path:
+            return self.system_python_path
+        return sys.executable
+    
+    def reset_manual_python_path(self):
+        
+        self.manual_python_path = None
+        if self.logger:
+            self.logger.append_system_log(
+                f"{t('python_path_updated')}: {t('auto_detected_system_python')}", 
+                "info"
+            )
     
     def _init_system_python(self):
         if not self.is_frozen:

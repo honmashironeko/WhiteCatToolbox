@@ -29,8 +29,7 @@ try:
 except ImportError:
     URLLIB_AVAILABLE = False
 
-
-CURRENT_VERSION = "v0.0.4"
+CURRENT_VERSION = "v0.0.5"
 
 def compare_versions(version1, version2):
     def normalize_version(v):
@@ -41,7 +40,6 @@ def compare_versions(version1, version2):
     
     v1_parts = normalize_version(version1)
     v2_parts = normalize_version(version2)
-    
 
     max_len = max(len(v1_parts), len(v2_parts))
     v1_parts.extend([0] * (max_len - len(v1_parts)))
@@ -73,8 +71,6 @@ class UpdateChecker(QThread):
             self.check_completed.emit(False, str(e))
     
     def check_for_updates(self):
-        
-        
 
         if REQUESTS_AVAILABLE:
             return self._check_with_requests()
@@ -93,7 +89,6 @@ class UpdateChecker(QThread):
             }
             
             print(f"[调试] 正在检查更新: {self.repo_url}")
-            
 
             response = requests.get(
                 self.repo_url, 
@@ -162,17 +157,14 @@ class UpdateChecker(QThread):
                     'Accept': 'application/vnd.github.v3+json'
                 }
             )
-            
 
             ssl_contexts = []
-            
 
             try:
                 ssl_context1 = ssl.create_default_context()
                 ssl_contexts.append(ssl_context1)
             except:
                 pass
-            
 
             try:
                 ssl_context2 = ssl.create_default_context()
@@ -181,7 +173,6 @@ class UpdateChecker(QThread):
                 ssl_contexts.append(ssl_context2)
             except:
                 pass
-            
 
             last_error = None
             for ssl_context in ssl_contexts:
@@ -200,7 +191,6 @@ class UpdateChecker(QThread):
                 except Exception as e:
                     last_error = e
                     continue
-            
 
             if last_error:
                 if isinstance(last_error, urllib.error.URLError):
@@ -219,7 +209,6 @@ class UpdateChecker(QThread):
             self.check_completed.emit(False, f"检查更新失败: {str(e)}")
     
     def _process_response_data(self, data):
-        
 
         latest_version = data.get('tag_name', '')
         release_name = data.get('name', '')
@@ -228,7 +217,6 @@ class UpdateChecker(QThread):
         published_at = data.get('published_at', '')
         
         print(f"[调试] 版本比较: 最新={latest_version}, 当前={CURRENT_VERSION}")
-        
 
         comparison_result = compare_versions(latest_version, CURRENT_VERSION)
         print(f"[调试] 比较结果: {comparison_result}")
@@ -267,13 +255,11 @@ class UpdateNotificationDialog(QDialog):
         layout = QVBoxLayout()
         layout.setContentsMargins(s(20), s(20), s(20), s(20))
         layout.setSpacing(s(16))
-        
 
         title_label = QLabel("🎉 " + t("new_version_available"))
         title_label.setFont(QFont(get_system_font(), s(16), QFont.Bold))
         title_label.setStyleSheet(f"color: {colors['primary']}; margin-bottom: {s(8)}px;")
         layout.addWidget(title_label)
-        
 
         version_layout = QHBoxLayout()
         version_layout.setSpacing(s(20))
@@ -288,20 +274,17 @@ class UpdateNotificationDialog(QDialog):
         version_layout.addStretch()
         version_layout.addWidget(latest_label)
         layout.addLayout(version_layout)
-        
 
         if self.update_info.get('release_name'):
             release_title = QLabel(f"📦 {self.update_info['release_name']}")
             release_title.setFont(QFont(get_system_font(), s(13), QFont.Medium))
             release_title.setStyleSheet(f"color: {colors['text']}; margin: {s(8)}px 0;")
             layout.addWidget(release_title)
-        
 
         notes_label = QLabel(t("release_notes"))
         notes_label.setFont(QFont(get_system_font(), s(11), QFont.Medium))
         notes_label.setStyleSheet(f"color: {colors['text']}; margin-top: {s(8)}px;")
         layout.addWidget(notes_label)
-        
 
         release_notes = QTextEdit()
         release_notes.setPlainText(self.update_info.get('release_notes', t('no_release_notes')))
@@ -318,11 +301,9 @@ class UpdateNotificationDialog(QDialog):
             }}
         """)
         layout.addWidget(release_notes)
-        
 
         button_layout = QHBoxLayout()
         button_layout.setSpacing(s(12))
-        
 
         later_btn = QPushButton(t("remind_later"))
         later_btn.setMinimumSize(s(100), s(36))
@@ -343,7 +324,6 @@ class UpdateNotificationDialog(QDialog):
             }}
         """)
         later_btn.clicked.connect(self.reject)
-        
 
         download_btn = QPushButton("🔽 " + t("download_update"))
         download_btn.setMinimumSize(s(120), s(36))
@@ -373,7 +353,6 @@ class UpdateNotificationDialog(QDialog):
         layout.addLayout(button_layout)
         
         self.setLayout(layout)
-        
 
         self.setStyleSheet(f"""
             QDialog {{
@@ -474,7 +453,6 @@ class PromotionUpdateChecker(QThread):
             }
             
             print(f"[调试] 正在获取推广文件列表: {self.promotion_repo_url}")
-            
 
             response = requests.get(
                 self.promotion_repo_url,
@@ -493,22 +471,21 @@ class PromotionUpdateChecker(QThread):
             
             files_info = response.json()
             print(f"[调试] 发现 {len(files_info)} 个推广文件")
-            
 
             if not os.path.exists(self.promotion_dir):
                 os.makedirs(self.promotion_dir)
                 print(f"[调试] 创建推广文件夹: {self.promotion_dir}")
             
             updated_files = []
-            
 
             for file_info in files_info:
                 if file_info.get('type') == 'file':
                     file_name = file_info.get('name')
                     download_url = file_info.get('download_url')
+                    remote_sha = file_info.get('sha')
                     
                     if file_name and download_url:
-                        if self._download_and_replace_file(file_name, download_url, headers):
+                        if self._download_and_replace_file(file_name, download_url, headers, verify=True, remote_sha=remote_sha):
                             updated_files.append(file_name)
             
             if updated_files:
@@ -551,9 +528,10 @@ class PromotionUpdateChecker(QThread):
             if file_info.get('type') == 'file':
                 file_name = file_info.get('name')
                 download_url = file_info.get('download_url')
+                remote_sha = file_info.get('sha')
                 
                 if file_name and download_url:
-                    if self._download_and_replace_file(file_name, download_url, headers, verify):
+                    if self._download_and_replace_file(file_name, download_url, headers, verify, remote_sha=remote_sha):
                         updated_files.append(file_name)
         
         if updated_files:
@@ -561,13 +539,31 @@ class PromotionUpdateChecker(QThread):
         else:
             self.update_completed.emit(True, "推广内容已是最新")
     
-    def _download_and_replace_file(self, file_name, download_url, headers, verify=True):
+    def _download_and_replace_file(self, file_name, download_url, headers, verify=True, remote_sha=None):
         
         try:
             local_file_path = os.path.join(self.promotion_dir, file_name)
+
+            if os.path.exists(local_file_path) and remote_sha:
+
+                try:
+                    with open(local_file_path, 'r', encoding='utf-8') as f:
+                        local_content = f.read()
+                    
+                    import hashlib
+                    import base64
+
+                    local_blob = f"blob {len(local_content.encode('utf-8'))}\0{local_content}"
+                    local_sha = hashlib.sha1(local_blob.encode('utf-8')).hexdigest()
+                    
+                    if local_sha == remote_sha:
+                        print(f"[调试] 文件SHA相同，跳过下载: {file_name}")
+                        return False
+                except Exception as e:
+                    print(f"[调试] 计算本地文件SHA失败: {e}")
+
             
             print(f"[调试] 正在下载推广文件: {file_name}")
-            
 
             response = requests.get(
                 download_url,
@@ -581,26 +577,11 @@ class PromotionUpdateChecker(QThread):
                 return False
             
             new_content = response.text
-            
-
-            if os.path.exists(local_file_path):
-                try:
-                    with open(local_file_path, 'r', encoding='utf-8') as f:
-                        current_content = f.read()
-                    
-                    if current_content == new_content:
-                        print(f"[调试] 文件内容相同，跳过: {file_name}")
-                        return False
-                except:
-
-                    pass
-            
 
             if os.path.exists(local_file_path):
                 backup_path = f"{local_file_path}.backup"
                 shutil.copy2(local_file_path, backup_path)
                 print(f"[调试] 创建备份: {backup_path}")
-            
 
             with open(local_file_path, 'w', encoding='utf-8') as f:
                 f.write(new_content)
@@ -625,7 +606,6 @@ class PromotionUpdateChecker(QThread):
                     'Accept': 'application/vnd.github.v3+json'
                 }
             )
-            
 
             ssl_contexts = []
             try:
@@ -712,7 +692,6 @@ class PromotionUpdateChecker(QThread):
                     with urllib.request.urlopen(req, context=ssl_context, timeout=20) as response:
                         if response.status == 200:
                             new_content = response.read().decode('utf-8')
-                            
 
                             if os.path.exists(local_file_path):
                                 try:
@@ -722,7 +701,6 @@ class PromotionUpdateChecker(QThread):
                                         return False
                                 except:
                                     pass
-                            
 
                             if os.path.exists(local_file_path):
                                 backup_path = f"{local_file_path}.backup"
@@ -741,7 +719,6 @@ class PromotionUpdateChecker(QThread):
             print(f"[调试] urllib下载失败 {file_name}: {e}")
             return False
 
-
 class PromotionUpdateManager(QObject):
     
     
@@ -757,10 +734,10 @@ class PromotionUpdateManager(QObject):
             if os.path.exists(config_path):
                 with open(config_path, 'r', encoding='utf-8') as f:
                     config = json.load(f)
-                return config.get('ads_enabled', False)
+                return config.get('ads_enabled', True)
         except Exception as e:
             print(f"[调试] 读取推广配置失败: {e}")
-        return False
+        return True
     
     def check_for_promotion_updates(self):
         

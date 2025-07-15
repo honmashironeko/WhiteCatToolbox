@@ -34,40 +34,89 @@ def get_monospace_font_css():
     mono_font = get_monospace_font()
     return f"font-family: '{mono_font}', 'Consolas', 'Monaco', 'Courier New', monospace;"
 
+def normalize_path_separators(path, system):
+    """
+    Normalize path separators based on the operating system.
+    Only converts paths that look like file paths (contain / or \).
+    """
+    if not path or not isinstance(path, str):
+        return path
+
+    if ('/' in path or '\\' in path) and not path.startswith(('http://', 'https://', 'ftp://')):
+        if system == "Windows":
+
+            return path.replace('/', '\\')
+        else:
+
+            return path.replace('\\', '/')
+    
+    return path
+
 def build_cross_platform_command(tool_path, user_command, params):
     
-    try:
-        command_parts = shlex.split(user_command)
-    except ValueError:
-        command_parts = user_command.split()
-    
     system = platform.system()
+
+    BACKSLASH_PLACEHOLDER = "<<BACKSLASH>>"
+    if system == "Windows":
+        user_command_safe = user_command.replace('\\', BACKSLASH_PLACEHOLDER)
+    else:
+        user_command_safe = user_command
+    
+    try:
+        command_parts = shlex.split(user_command_safe)
+    except ValueError:
+        command_parts = user_command_safe.split()
+
+    if system == "Windows":
+        command_parts = [part.replace(BACKSLASH_PLACEHOLDER, '\\') for part in command_parts]
     
     if len(command_parts) >= 2 and command_parts[0] in ["python", "python3", "python.exe"]:
         script_name = command_parts[1]
-        full_script_path = os.path.join(tool_path, script_name)
+
+        if os.path.isabs(script_name):
+
+            full_script_path = script_name
+        else:
+
+            full_script_path = script_name
+
+        full_script_path = normalize_path_separators(full_script_path, system)
+
+        processed_args = []
+        for arg in command_parts[2:]:
+            processed_args.append(normalize_path_separators(arg, system))
         
-        if system == "Windows":
-            full_script_path = full_script_path.replace('/', '\\')
-        
-        command = [command_parts[0], full_script_path] + command_parts[2:]
+        command = [command_parts[0], full_script_path] + processed_args
         
         if params:
-            command.extend(params)
+
+            normalized_params = [normalize_path_separators(p, system) for p in params]
+            command.extend(normalized_params)
         
         return command
         
     elif len(command_parts) >= 1:
         exe_name = command_parts[0]
-        full_exe_path = os.path.join(tool_path, exe_name)
+
+        if os.path.isabs(exe_name):
+
+            full_exe_path = exe_name
+        else:
+
+            full_exe_path = exe_name
+
+        full_exe_path = normalize_path_separators(full_exe_path, system)
+
+        processed_args = []
+        for arg in command_parts[1:]:
+            processed_args.append(normalize_path_separators(arg, system))
         
-        if system == "Windows":
-            full_exe_path = full_exe_path.replace('/', '\\')
-        
-        command = [full_exe_path] + command_parts[1:]
+        command = [full_exe_path] + processed_args
         
         if params:
-            command.extend(params)
+
+            normalized_params = [normalize_path_separators(p, system) for p in params]
+            command.extend(normalized_params)
         
         return command
     else:

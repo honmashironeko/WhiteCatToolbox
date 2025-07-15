@@ -239,7 +239,6 @@ def get_cross_platform_app_stylesheet():
             font-weight: 500;
             line-height: 1.3;
             max-width: {s(450)}px;
-            word-wrap: break-word;
             white-space: pre-wrap;
         }}
     """ 

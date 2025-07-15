@@ -1,7 +1,11 @@
+"""
+IsATTY Fix Module for WhiteCat Toolbox
+提供 isatty() 修复功能，支持子进程注入
+"""
+
 import sys
 import os
 from types import MethodType
-
 
 ISATTY_FIX_CODE = '''
 import sys
@@ -11,7 +15,6 @@ from types import MethodType
 def _always_true(*args, **kwargs):
     return True
 
-
 for stream_name in ("stdout", "stderr", "stdin", "__stdout__", "__stderr__", "__stdin__"):
     stream = getattr(sys, stream_name, None)
     if stream is not None and hasattr(stream, "isatty"):
@@ -20,7 +23,6 @@ for stream_name in ("stdout", "stderr", "stdin", "__stdout__", "__stderr__", "__
         except Exception:
             pass
 
-
 try:
     os.isatty = _always_true
 except Exception:
@@ -28,9 +30,11 @@ except Exception:
 '''
 
 def apply_isatty_fix():
+    """
+    直接应用 isatty 修复到当前进程
+    """
     def _always_true(*args, **kwargs):
         return True
-
 
     for stream_name in ("stdout", "stderr", "stdin", "__stdout__", "__stderr__", "__stdin__"):
         stream = getattr(sys, stream_name, None)
@@ -40,16 +44,23 @@ def apply_isatty_fix():
             except Exception:
                 pass
 
-
     try:
         os.isatty = _always_true
     except Exception:
         pass
 
 def get_python_command_with_isatty_fix(original_command):
+    """
+    将原始 Python 命令包装为带有 isatty 修复的命令
+    
+    Args:
+        original_command (list): 原始命令列表
+    
+    Returns:
+        list: 包装后的命令列表
+    """
     if not original_command:
         return original_command
-    
 
     try:
         import json
@@ -62,7 +73,6 @@ def get_python_command_with_isatty_fix(original_command):
     except Exception:
 
         pass
-    
 
     python_executables = ['python', 'python3', 'python.exe']
     first_command = os.path.basename(original_command[0]).lower()
@@ -76,20 +86,16 @@ def get_python_command_with_isatty_fix(original_command):
     
     if not is_python_command:
         return original_command
-    
 
     if len(original_command) >= 2 and original_command[1] == '-c':
         return original_command
-    
 
     if len(original_command) == 1:
 
         return [original_command[0], '-c', ISATTY_FIX_CODE + '\nimport code; code.interact()']
-    
 
     script_arg_index = 1
     python_flags = []
-    
 
     for i in range(1, len(original_command)):
         arg = original_command[i]
@@ -102,12 +108,10 @@ def get_python_command_with_isatty_fix(original_command):
     if script_arg_index < len(original_command):
         script_path = original_command[script_arg_index]
         script_args = original_command[script_arg_index + 1:]
-        
 
         if script_path.endswith('.py') or os.path.isfile(script_path):
             exec_code = wrap_python_script_with_isatty_fix(script_path, script_args)
             return [original_command[0]] + python_flags + ['-c', exec_code]
-    
 
     if len(original_command) >= 3 and original_command[1] == '-m':
         module_name = original_command[2]
@@ -115,7 +119,6 @@ def get_python_command_with_isatty_fix(original_command):
         
         exec_code = f'''
 {ISATTY_FIX_CODE}
-
 
 import sys
 import runpy
@@ -126,11 +129,9 @@ except SystemExit as e:
     sys.exit(e.code)
 '''
         return [original_command[0], '-c', exec_code]
-    
 
     exec_code = f'''
 {ISATTY_FIX_CODE}
-
 
 import sys
 import subprocess
@@ -140,36 +141,48 @@ sys.exit(subprocess.call({repr(original_command[1:])}, env=os.environ))
     return [original_command[0], '-c', exec_code]
 
 def wrap_python_script_with_isatty_fix(script_path, script_args=None):
+    """
+    包装 Python 脚本，使其在启动时应用 isatty 修复
+    
+    Args:
+        script_path (str): Python 脚本路径
+        script_args (list): 脚本参数
+    
+    Returns:
+        str: 包装后的执行代码
+    """
     if script_args is None:
         script_args = []
-    
 
-    abs_script_path = os.path.abspath(script_path)
-    script_dir = os.path.dirname(abs_script_path)
-    
+    if os.path.isabs(script_path):
 
-    exec_code = f'''
+        abs_script_path = os.path.abspath(script_path)
+        script_dir = os.path.dirname(abs_script_path)
+        should_change_dir = True
+    else:
+
+        abs_script_path = script_path
+        script_dir = None
+        should_change_dir = False
+
+    if should_change_dir:
+        exec_code = f'''
 {ISATTY_FIX_CODE}
-
 
 import sys
 import os
 sys.argv = {repr([script_path] + script_args)}
 
-
 script_dir = {repr(script_dir)}
 if script_dir not in sys.path:
     sys.path.insert(0, script_dir)
 
-
 original_cwd = os.getcwd()
 try:
     os.chdir(script_dir)
-    
 
     with open({repr(abs_script_path)}, 'r', encoding='utf-8') as f:
         script_content = f.read()
-    
 
     compiled = compile(script_content, {repr(abs_script_path)}, 'exec')
     exec(compiled)
@@ -177,6 +190,25 @@ try:
 finally:
 
     os.chdir(original_cwd)
+'''
+    else:
+
+        exec_code = f'''
+{ISATTY_FIX_CODE}
+
+import sys
+import os
+sys.argv = {repr([script_path] + script_args)}
+
+current_dir = os.getcwd()
+if current_dir not in sys.path:
+    sys.path.insert(0, current_dir)
+
+with open({repr(script_path)}, 'r', encoding='utf-8') as f:
+    script_content = f.read()
+
+compiled = compile(script_content, {repr(script_path)}, 'exec')
+exec(compiled)
 '''
     
     return exec_code 
