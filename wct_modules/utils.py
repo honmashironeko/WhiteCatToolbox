@@ -1,7 +1,10 @@
 import os
+import sys
 import platform
 import json
 import shlex
+import subprocess
+from pathlib import Path
 from .i18n import t
 
 def get_system_font():
@@ -182,3 +185,19 @@ def s(value):
     return int(value * SCALE_FACTOR)
 
 load_scale_factor() 
+
+def get_optimized_subprocess_kwargs():
+    """获取优化的subprocess启动参数"""
+    kwargs = {}
+    
+    if platform.system() == "Windows":
+        # Windows下隐藏控制台窗口
+        startupinfo = subprocess.STARTUPINFO()
+        startupinfo.dwFlags |= subprocess.STARTF_USESHOWWINDOW
+        startupinfo.wShowWindow = subprocess.SW_HIDE
+        kwargs['startupinfo'] = startupinfo
+        
+        # 设置创建标志
+        kwargs['creationflags'] = subprocess.CREATE_NO_WINDOW
+    
+    return kwargs 

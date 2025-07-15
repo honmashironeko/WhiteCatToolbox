@@ -1,5 +1,7 @@
 from PySide6.QtCore import QProcess
 import re
+import platform
+
 class ToolProcess(QProcess):
     
     
@@ -9,7 +11,41 @@ class ToolProcess(QProcess):
         self.readyReadStandardOutput.connect(self.handle_stdout)
         self.readyReadStandardError.connect(self.handle_stderr)
         self.finished.connect(self.handle_finished)
+
+        if platform.system() == "Windows":
+            self._configure_windows_process()
     
+    def _configure_windows_process(self):
+        
+        try:
+
+            self.setProcessChannelMode(QProcess.ProcessChannelMode.SeparateChannels)
+
+        except AttributeError:
+
+            pass
+    
+    def write(self, data):
+        
+        try:
+            if self.state() == QProcess.ProcessState.Running:
+                result = super().write(data)
+
+                if self.process_tab and hasattr(self.process_tab, 'append_system_log'):
+
+                    pass
+                return result
+            else:
+
+                if self.process_tab and hasattr(self.process_tab, 'append_system_log'):
+                    self.process_tab.append_system_log("Process not running, cannot write data", "warning")
+                return 0
+        except Exception as e:
+
+            if self.process_tab and hasattr(self.process_tab, 'append_system_log'):
+                self.process_tab.append_system_log(f"Failed to write to process: {e}", "error")
+            return 0
+
     def convert_ansi_to_html(self, text):
         ansi_colors = {
             '30': '#000000',
@@ -78,8 +114,7 @@ class ToolProcess(QProcess):
         
         data = self.readAllStandardOutput()
         stdout = str(data, encoding="utf-8", errors="ignore")
-        if self.process_tab and hasattr(self.process_tab, 'append_output'):
-
+        if self.process_tab and hasattr(self.process_tab, 'append_output_html'):
             html_output = self.convert_ansi_to_html(stdout)
             self.process_tab.append_output_html(html_output)
     
@@ -87,8 +122,7 @@ class ToolProcess(QProcess):
         
         data = self.readAllStandardError()
         stderr = str(data, encoding="utf-8", errors="ignore")
-        if self.process_tab and hasattr(self.process_tab, 'append_output'):
-
+        if self.process_tab and hasattr(self.process_tab, 'append_output_html'):
             html_output = self.convert_ansi_to_html(stderr)
             self.process_tab.append_output_html(f"<span style='color: #FF6B6B;'>[ERROR]</span> {html_output}")
     

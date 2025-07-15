@@ -10,6 +10,7 @@ from PySide6.QtGui import QFont, QTextCursor, QTextCharFormat, QColor, QTextDocu
 from .theme import colors, fonts, params
 from .utils import s
 from .i18n import t, get_current_language
+from .log_manager import TerminalLogManager
 class TerminalTextEdit(QTextEdit):
     def __init__(self, parent_tab):
         super().__init__()
@@ -51,11 +52,12 @@ class TerminalTextEdit(QTextEdit):
             return
         super().keyPressEvent(event)
 class ProcessTab(QWidget):
-    def __init__(self, process, process_name, parent_tabs):
+    def __init__(self, process, process_name, parent_tabs, tool_name=None):
         super().__init__()
         self.process = process
         self.process_name = process_name
         self.parent_tabs = parent_tabs
+        self.tool_name = tool_name or "unknown_tool"
         self.prompt = "$ "  
         self.input_start_position = 0  
         self.history = []  
@@ -68,6 +70,10 @@ class ProcessTab(QWidget):
         self.current_highlight_index = -1
         self.search_highlights = []
         self.search_visible = False
+
+        self.log_manager = None
+        self._initialize_log_manager()
+        
         self.setup_ui()
     def setup_ui(self):
         layout = QVBoxLayout()
@@ -215,6 +221,30 @@ class ProcessTab(QWidget):
         self.search_widget.hide()
         self.current_match_display.hide()
         self.setLayout(layout)
+    
+    def _initialize_log_manager(self):
+        
+        try:
+            self.log_manager = TerminalLogManager(
+                tool_name=self.tool_name,
+                process_name=self.process_name
+            )
+
+            self.log_manager.log_system_event(f"Terminal session started for {self.tool_name}", "info")
+
+            self.log_flush_timer = QTimer()
+            self.log_flush_timer.timeout.connect(self._flush_logs)
+            self.log_flush_timer.start(5000)
+            
+        except Exception as e:
+            print(f"Failed to initialize log manager: {e}")
+            self.log_manager = None
+    
+    def _flush_logs(self):
+        
+        if self.log_manager:
+            self.log_manager.force_flush()
+    
     def setup_search_ui(self):
         self.search_widget = QWidget()
         search_layout = QHBoxLayout()
@@ -238,8 +268,10 @@ class ProcessTab(QWidget):
                 outline: none;
             }}
         """)
+
         self.search_input.textChanged.connect(self.on_search_text_changed)
-        self.search_input.returnPressed.connect(self.search_next)
+
+        self.search_input.returnPressed.connect(self.perform_search)
         search_layout.addWidget(self.search_input, 1)
         self.search_mode = QComboBox()
         self.search_mode.addItems([t("fuzzy_match"), t("exact_match"), t("regex_match")])
@@ -298,7 +330,7 @@ class ProcessTab(QWidget):
                 color: {colors["text_on_primary"]};
             }}
         """)
-        self.search_mode.currentTextChanged.connect(self.on_search_text_changed)
+
         search_layout.addWidget(self.search_mode)
         search_btn = QPushButton(t("search"))
         search_btn.setMinimumWidth(s(60))
@@ -442,83 +474,179 @@ class ProcessTab(QWidget):
         else:
             self.show_search()
     def on_search_text_changed(self):
+        
         search_text = self.search_input.text().strip()
-        if search_text:
-            QTimer.singleShot(300, self.perform_search)
-        else:
-            self.clear_search_highlights()
+        if not search_text:
+            self.cancel_batch_operations()
+            self.fast_clear_search_highlights()
             self.current_search_results = []
             self.current_highlight_index = -1
             self.match_count_label.setText("0/0")
             self.current_match_display.clear()
             self.current_match_display.hide()
+            
+    def cancel_batch_operations(self):
+        
+        if hasattr(self, 'search_timer') and self.search_timer.isActive():
+            self.search_timer.stop()
+        if hasattr(self, 'highlight_timer') and self.highlight_timer.isActive():
+            self.highlight_timer.stop()
     def perform_search(self):
         search_text = self.search_input.text().strip()
         if not search_text:
             return
-        self.clear_search_highlights()
+
+        self.cancel_batch_operations()
+
+        self.fast_clear_search_highlights()
+
+        self.match_count_label.setText("搜索中...")
+
+        self.start_batch_search(search_text)
+        
+    def start_batch_search(self, search_text):
+        
+        self.search_text = search_text
+        self.search_mode_text = self.search_mode.currentText()
         terminal_text = self.terminal_output.toPlainText()
-        lines = terminal_text.split('\n')
-        search_mode = self.search_mode.currentText()
-        matches = []
-        try:
-            if search_mode == t("fuzzy_match"):
-                for line_num, line in enumerate(lines):
-                    if search_text.lower() in line.lower():
-                        matches.append((line_num, line.strip()))
-            elif search_mode == t("exact_match"):
-                for line_num, line in enumerate(lines):
-                    if search_text in line:
-                        matches.append((line_num, line.strip()))
-            elif search_mode == t("regex_match"):
-                pattern = re.compile(search_text, re.IGNORECASE)
-                for line_num, line in enumerate(lines):
-                    if pattern.search(line):
-                        matches.append((line_num, line.strip()))
-        except re.error as e:
-            self.append_system_log(f"{t('regex_error')}: {e}", "error")
+        self.search_lines = terminal_text.split('\n')
+        self.search_matches = []
+        self.search_line_index = 0
+        self.search_batch_size = 100
+
+        if self.search_mode_text == t("regex_match"):
+            try:
+                self.search_pattern = re.compile(search_text, re.IGNORECASE)
+            except re.error as e:
+                self.append_system_log(f"{t('regex_error')}: {e}", "error")
+                return
+        else:
+            self.search_pattern = None
+
+        self.search_text_lower = search_text.lower() if self.search_mode_text == t("fuzzy_match") else search_text
+
+        if not hasattr(self, 'search_timer'):
+            self.search_timer = QTimer()
+            self.search_timer.timeout.connect(self.process_search_batch)
+        self.search_timer.start(10)
+    
+    def process_search_batch(self):
+        
+        if self.search_line_index >= len(self.search_lines):
+
+            self.search_timer.stop()
+            self.finish_search()
             return
-        self.current_search_results = matches
-        self.highlight_search_results(search_text, search_mode)
-        match_count = len(matches)
+
+        end_index = min(self.search_line_index + self.search_batch_size, len(self.search_lines))
+        
+        for line_num in range(self.search_line_index, end_index):
+            line = self.search_lines[line_num]
+            match_found = False
+            
+            try:
+                if self.search_mode_text == t("fuzzy_match"):
+                    match_found = self.search_text_lower in line.lower()
+                elif self.search_mode_text == t("exact_match"):
+                    match_found = self.search_text in line
+                elif self.search_mode_text == t("regex_match") and self.search_pattern:
+                    match_found = bool(self.search_pattern.search(line))
+                    
+                if match_found:
+                    self.search_matches.append((line_num, line.strip()))
+            except Exception:
+                continue
+                
+        self.search_line_index = end_index
+
+        progress = int((self.search_line_index / len(self.search_lines)) * 100)
+        self.match_count_label.setText(f"搜索中... {progress}% ({len(self.search_matches)})")
+        
+    def finish_search(self):
+        
+        self.current_search_results = self.search_matches
+        self.start_batch_highlight()
+        match_count = len(self.search_matches)
         self.match_count_label.setText(f"0/{match_count}" if match_count > 0 else "0/0")
-        self.update_all_matches_display(matches)
+        self.update_all_matches_display(self.search_matches)
         if match_count > 0:
             self.current_highlight_index = 0
             self.jump_to_match(0)
-    def highlight_search_results(self, search_text, search_mode):
-        if not search_text:
+    def start_batch_highlight(self):
+        
+        if not self.search_text:
             return
-        self.clear_search_highlights()
-        highlight_format = QTextCharFormat()
-        highlight_format.setBackground(QColor(colors["terminal_selection"]))
-        highlight_format.setForeground(QColor("#000000"))
-        document = self.terminal_output.document()
+            
+        self.highlight_format = QTextCharFormat()
+        self.highlight_format.setBackground(QColor(colors["terminal_selection"]))
+        self.highlight_format.setForeground(QColor("#000000"))
         self.search_highlights = []
-        if search_mode == t("regex_match"):
+
+        document = self.terminal_output.document()
+        
+        if self.search_mode_text == t("regex_match"):
             try:
                 from PySide6.QtCore import QRegularExpression
-                regex = QRegularExpression(search_text)
-                regex.setPatternOptions(QRegularExpression.PatternOption.CaseInsensitiveOption)
-                cursor = QTextCursor(document)
-                while True:
-                    cursor = document.find(regex, cursor)
-                    if cursor.isNull():
-                        break
-                    cursor.mergeCharFormat(highlight_format)
-                    self.search_highlights.append((cursor.selectionStart(), cursor.selectionEnd()))
-            except Exception as e:
-                self.perform_simple_search(document, search_text, highlight_format, case_sensitive=False)
+                self.highlight_regex = QRegularExpression(self.search_text)
+                self.highlight_regex.setPatternOptions(QRegularExpression.PatternOption.CaseInsensitiveOption)
+                self.highlight_cursor = QTextCursor(document)
+                self.highlight_mode = "regex"
+            except Exception:
+                self.highlight_mode = "simple"
+                self.setup_simple_highlight(document)
         else:
-            case_sensitive = (search_mode == t("exact_match"))
-            self.perform_simple_search(document, search_text, highlight_format, case_sensitive)
-    def perform_simple_search(self, document, search_text, highlight_format, case_sensitive):
+            self.highlight_mode = "simple"
+            self.setup_simple_highlight(document)
+
+        if not hasattr(self, 'highlight_timer'):
+            self.highlight_timer = QTimer()
+            self.highlight_timer.timeout.connect(self.process_highlight_batch)
+        self.highlight_timer.start(5)
+        
+    def setup_simple_highlight(self, document):
+        
+        case_sensitive = (self.search_mode_text == t("exact_match"))
+        if case_sensitive:
+            self.highlight_find_flags = QTextDocument.FindFlag.FindCaseSensitively
+        else:
+            self.highlight_find_flags = QTextDocument.FindFlag(0)
+        self.highlight_cursor = QTextCursor(document)
+        
+    def process_highlight_batch(self):
+        
+        batch_size = 20
+        processed = 0
+        
+        while processed < batch_size:
+            if self.highlight_mode == "regex":
+                self.highlight_cursor = self.terminal_output.document().find(self.highlight_regex, self.highlight_cursor)
+            else:
+                self.highlight_cursor = self.terminal_output.document().find(
+                    self.search_text, self.highlight_cursor, options=self.highlight_find_flags)
+                
+            if self.highlight_cursor.isNull():
+
+                self.highlight_timer.stop()
+                return
+                
+            start_pos = self.highlight_cursor.selectionStart()
+            end_pos = self.highlight_cursor.selectionEnd()
+            self.highlight_cursor.mergeCharFormat(self.highlight_format)
+            self.search_highlights.append((start_pos, end_pos))
+            self.highlight_cursor.setPosition(end_pos)
+            processed += 1
+            
+    def highlight_search_results(self, search_text, search_mode):
+
+        pass
+    def perform_simple_search(self, document, search_text, highlight_format, case_sensitive, max_highlights=500):
         if case_sensitive:
             find_flags = QTextDocument.FindFlag.FindCaseSensitively
         else:
             find_flags = QTextDocument.FindFlag(0)
         cursor = QTextCursor(document)
-        while True:
+        highlight_count = 0
+        while highlight_count < max_highlights:
             cursor = document.find(search_text, cursor, options=find_flags)
             if cursor.isNull():
                 break
@@ -527,6 +655,7 @@ class ProcessTab(QWidget):
             cursor.mergeCharFormat(highlight_format)
             self.search_highlights.append((start_pos, end_pos))
             cursor.setPosition(end_pos)
+            highlight_count += 1
     def clear_search_highlights(self):
         if not self.search_highlights:
             return
@@ -539,6 +668,27 @@ class ProcessTab(QWidget):
             default_format.setBackground(QColor("transparent"))
             default_format.setForeground(QColor(colors["terminal_text"]))
             cursor.setCharFormat(default_format)
+        self.search_highlights = []
+        
+    def fast_clear_search_highlights(self):
+        
+        if not self.search_highlights:
+            return
+
+        if len(self.search_highlights) > 100:
+
+            document = self.terminal_output.document()
+            cursor = QTextCursor(document)
+            cursor.select(QTextCursor.SelectionType.Document)
+            default_format = QTextCharFormat()
+            default_format.setBackground(QColor("transparent"))
+            default_format.setForeground(QColor(colors["terminal_text"]))
+            cursor.setCharFormat(default_format)
+        else:
+
+            self.clear_search_highlights()
+            return
+            
         self.search_highlights = []
     def search_next(self):
         if not self.current_search_results:
@@ -650,17 +800,44 @@ class ProcessTab(QWidget):
         if user_input and (not self.history or self.history[-1] != user_input):
             self.history.append(user_input)
         self.history_index = len(self.history)
+
         cursor.insertText("\n")
-        if self.process and self.process.state() == QProcess.Running:
+
+        if user_input and self.log_manager:
+            self.log_manager.log_terminal_output(user_input, "input")
+
+        if self.process and self.process.state() == QProcess.ProcessState.Running:
             if user_input:
-                command_bytes = (user_input + "\n").encode('utf-8')
-                self.process.write(command_bytes)
-                cursor.insertHtml(f"<span style='color: {colors['terminal_command']};'>{t('command_sent').format(user_input=user_input)}</span>\n")
+                try:
+                    command_bytes = (user_input + "\n").encode('utf-8')
+                    bytes_written = self.process.write(command_bytes)
+                    if bytes_written > 0:
+                        cursor.insertHtml(f"<span style='color: {colors['terminal_command']};'>{t('command_sent').format(user_input=user_input)}</span>\n")
+                    else:
+                        cursor.insertHtml(f"<span style='color: {colors['log_command_error']};'>Failed to send command to process</span>\n")
+                except Exception as e:
+                    cursor.insertHtml(f"<span style='color: {colors['log_command_error']};'>Error sending command: {str(e)}</span>\n")
             else:
-                self.process.write(b"\n")
+                try:
+                    self.process.write(b"\n")
+                except Exception as e:
+                    cursor.insertHtml(f"<span style='color: {colors['log_command_error']};'>Error sending newline: {str(e)}</span>\n")
         else:
+
+            if self.process:
+                state = self.process.state()
+                if state == QProcess.ProcessState.NotRunning:
+                    cursor.insertHtml(f"<span style='color: {colors['log_command_error']};'>Process is not running</span>\n")
+                elif state == QProcess.ProcessState.Starting:
+                    cursor.insertHtml(f"<span style='color: {colors['log_command_warning']};'>Process is still starting, please wait...</span>\n")
+                else:
+                    cursor.insertHtml(f"<span style='color: {colors['log_command_error']};'>Process state: {state}</span>\n")
+            else:
+                cursor.insertHtml(f"<span style='color: {colors['log_command_error']};'>No process available</span>\n")
+                
             if user_input:
                 cursor.insertHtml(f"<span style='color: {colors['log_command_error']};'>{t('process_not_running_error').format(user_input=user_input)}</span>\n")
+        
         self.show_prompt()
     def show_previous_command(self):
         if self.history and self.history_index > 0:
@@ -808,6 +985,10 @@ class ProcessTab(QWidget):
             interrupt_action.triggered.connect(self.interrupt_process)
         menu.exec(self.terminal_output.mapToGlobal(position))
     def append_system_log(self, text, log_type="info"):
+
+        if self.log_manager:
+            self.log_manager.log_system_event(text, log_type)
+        
         cursor = self.terminal_output.textCursor()
         cursor.movePosition(cursor.MoveOperation.End)
         import datetime
@@ -848,6 +1029,10 @@ class ProcessTab(QWidget):
         self.terminal_output.setTextCursor(cursor)
         self.terminal_output.ensureCursorVisible()
     def append_output(self, text):
+
+        if self.log_manager:
+            self.log_manager.log_terminal_output(text, "output")
+        
         cursor = self.terminal_output.textCursor()
         cursor.movePosition(cursor.MoveOperation.End)
         current_text = self.terminal_output.toPlainText()
@@ -866,6 +1051,11 @@ class ProcessTab(QWidget):
         self.terminal_output.setTextCursor(cursor)
         self.terminal_output.ensureCursorVisible()
     def append_output_html(self, html_text):
+
+        if self.log_manager:
+            output_type = "error" if "[ERROR]" in html_text else "output"
+            self.log_manager.log_terminal_output(html_text, output_type)
+        
         cursor = self.terminal_output.textCursor()
         cursor.movePosition(cursor.MoveOperation.End)
         current_text = self.terminal_output.toPlainText()
@@ -889,7 +1079,7 @@ class ProcessTab(QWidget):
         self.terminal_output.setTextCursor(cursor)
         self.terminal_output.ensureCursorVisible()
     def stop_process(self):
-        if self.process and self.process.state() != QProcess.NotRunning:
+        if self.process and self.process.state() != QProcess.ProcessState.NotRunning:
             self.process.kill()
             self.status_label.setText(t("stopped"))
             self.status_label.setStyleSheet(f"""
@@ -902,6 +1092,12 @@ class ProcessTab(QWidget):
                 }}
             """)
             self.append_system_log(t("process_stopped_manually"), "warning")
+
+        if hasattr(self, 'log_flush_timer'):
+            self.log_flush_timer.stop()
+
+        if self.log_manager:
+            self.log_manager.close()
     def process_finished(self, exit_code):
         if exit_code == 0:
             self.status_label.setText(t("completed"))
@@ -927,4 +1123,18 @@ class ProcessTab(QWidget):
                 }}
             """)
             self.append_system_log(f"{t('process_exited_abnormally')}, {t('exit_code')}: {exit_code}", "error")
+        
         self.show_prompt()
+
+        if hasattr(self, 'log_flush_timer'):
+            self.log_flush_timer.stop()
+            
+        if self.log_manager:
+            self.log_manager.log_system_event(f"Process finished with exit code: {exit_code}", 
+                                            "success" if exit_code == 0 else "error")
+            self.log_manager.close()
+    
+    def __del__(self):
+        
+        if hasattr(self, 'log_manager') and self.log_manager:
+            self.log_manager.close()

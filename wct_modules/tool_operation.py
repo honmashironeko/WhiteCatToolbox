@@ -35,6 +35,9 @@ class ToolOperationPage(QWidget):
 
         from .env_manager import EnvironmentManager
         self.env_manager = EnvironmentManager(self.system_log_tab)
+
+        self.init_python_selector()
+        
         self.load_config()
         self.load_command_history()
         self.load_env_config()
@@ -294,24 +297,24 @@ class ToolOperationPage(QWidget):
         python_label_layout = QHBoxLayout()
         python_label_layout.setContentsMargins(0, 0, 0, 0)
         python_label_layout.setSpacing(s(12))
-        
-        python_label = QLabel(t("python_interpreter"))
-        python_label.setFont(QFont(fonts["system"], s(9), QFont.Bold))
-        python_label.setStyleSheet(f"color: {colors['text_secondary']}; background: transparent; border: none;")
-        python_label.setMinimumWidth(s(140))
-        python_label.setWordWrap(False)
-        
-        self.python_browse_btn = QPushButton(t("browse_python"))
-        self.python_browse_btn.setMinimumHeight(s(24))
-        self.python_browse_btn.setFixedWidth(s(50))
-        self.python_browse_btn.setStyleSheet(f"""
+
+        python_selector_label = QLabel(t("tool_python_interpreter"))
+        python_selector_label.setFont(QFont(fonts["system"], s(9), QFont.Bold))
+        python_selector_label.setStyleSheet(f"color: {colors['text_secondary']}; background: transparent; border: none;")
+        python_selector_label.setMinimumWidth(s(140))
+        python_selector_label.setWordWrap(False)
+
+        refresh_python_btn = QPushButton(t("refresh"))
+        refresh_python_btn.setMinimumHeight(s(24))
+        refresh_python_btn.setFixedWidth(s(30))
+        refresh_python_btn.setStyleSheet(f"""
             QPushButton {{
                 background-color: transparent;
                 border: 1px solid {colors["background_gray"]};
                 border-radius: {params["border_radius_very_small"]};
-                padding: {s(4)}px {s(4)}px;
+                padding: {s(2)}px {s(2)}px;
                 color: {colors["text_secondary"]};
-                font-size: {s(8)}pt;
+                font-size: {s(7)}pt;
                 font-weight: 500;
             }}
             QPushButton:hover {{
@@ -323,41 +326,74 @@ class ToolOperationPage(QWidget):
                 background-color: {colors["secondary_pressed"]};
             }}
         """)
-        self.python_browse_btn.clicked.connect(self.browse_python_path)
+        refresh_python_btn.clicked.connect(self.refresh_python_list)
+
+        browse_python_btn = QPushButton(t("browse"))
+        browse_python_btn.setMinimumHeight(s(24))
+        browse_python_btn.setFixedWidth(s(30))
+        browse_python_btn.setStyleSheet(f"""
+            QPushButton {{
+                background-color: transparent;
+                border: 1px solid {colors["background_gray"]};
+                border-radius: {params["border_radius_very_small"]};
+                padding: {s(2)}px {s(2)}px;
+                color: {colors["text_secondary"]};
+                font-size: {s(7)}pt;
+                font-weight: 500;
+            }}
+            QPushButton:hover {{
+                background-color: {colors["secondary"]};
+                color: white;
+                border-color: {colors["secondary"]};
+            }}
+            QPushButton:pressed {{
+                background-color: {colors["secondary_pressed"]};
+            }}
+        """)
+        browse_python_btn.clicked.connect(self.browse_python_interpreter)
         
-        python_label_layout.addWidget(python_label, 1)
+        python_label_layout.addWidget(python_selector_label, 1)
         python_label_layout.addStretch()
-        python_label_layout.addWidget(self.python_browse_btn, 0)
+        python_label_layout.addWidget(refresh_python_btn, 0)
+        python_label_layout.addWidget(browse_python_btn, 0)
         python_label_widget.setLayout(python_label_layout)
 
-        self.python_input = QLineEdit()
-        self.python_input.setMinimumHeight(s(36))
-        self.python_input.setMinimumWidth(s(200))
-        self.python_input.setPlaceholderText(t("python_interpreter_placeholder"))
-        self.python_input.setToolTip(t("python_interpreter_tooltip"))
-        self.python_input.setContentsMargins(0, 0, 0, 0)
-        self.python_input.setStyleSheet(f"""
-            QLineEdit {{
+        self.python_selector = QComboBox()
+        self.python_selector.setMinimumHeight(s(36))
+        self.python_selector.setMinimumWidth(s(200))
+        self.python_selector.setContentsMargins(0, 0, 0, 0)
+        self.python_selector.setStyleSheet(f"""
+            QComboBox {{
                 background-color: {colors["main_background_start"]};
                 border: 1px solid {colors["background_gray"]};
                 border-radius: {params["border_radius_very_small"]};
-                padding: {s(8)}px {s(10)}px;
+                padding: {s(6)}px {s(10)}px;
                 color: {colors["text_secondary"]};
                 font-size: {s(9)}pt;
-                selection-background-color: {colors["secondary"]};
-                text-align: left;
             }}
-            QLineEdit:focus {{
+            QComboBox:focus {{
                 border-color: {colors["secondary"]};
                 background-color: {colors["white"]};
             }}
-            QLineEdit:hover {{
+            QComboBox:hover {{
                 border-color: #ced4da;
+            }}
+            QComboBox::drop-down {{
+                border: none;
+                width: {s(20)}px;
+            }}
+            QComboBox::down-arrow {{
+                image: none;
+                border-left: {s(4)}px solid transparent;
+                border-right: {s(4)}px solid transparent;
+                border-top: {s(6)}px solid {colors["text_secondary"]};
+                margin-right: {s(8)}px;
             }}
         """)
         
         python_column_layout.addWidget(python_label_widget)
-        python_column_layout.addWidget(self.python_input)
+        python_column_layout.addWidget(self.python_selector)
+        
         python_column.setLayout(python_column_layout)
 
         venv_column = QWidget()
@@ -436,7 +472,7 @@ class ToolOperationPage(QWidget):
         venv_env_widget.setLayout(venv_env_layout)
         layout.addWidget(venv_env_widget)
 
-        self.python_input.textChanged.connect(self.save_env_config)
+        self.python_selector.currentTextChanged.connect(self.save_env_config)
         self.venv_input.textChanged.connect(self.save_env_config)
         self.env_input.textChanged.connect(self.save_env_config)
         self.param_tabs = QTabWidget()
@@ -625,7 +661,7 @@ class ToolOperationPage(QWidget):
                 msg_box = QMessageBox(self)
                 msg_box.setWindowTitle(t("param_validation_failed"))
                 msg_box.setText(error_msg)
-                msg_box.setIcon(QMessageBox.Warning)
+                msg_box.setIcon(QMessageBox.Icon.Warning)
                 msg_box.exec()
             return
         
@@ -648,11 +684,12 @@ class ToolOperationPage(QWidget):
             return
         
         self.system_log_tab.append_system_log(f"{t('tool')} {self.tool_name} {t('startup')}", "info")
+        
         self.system_log_tab.append_system_log(f"{t('execute_command')}: {' '.join(command)}", "info")
 
         if self.new_tab_toggle.isChecked():
 
-            process_tab = ProcessTab(None, f"{t('process')}{len(self.processes) + 1}", self.process_tabs)
+            process_tab = ProcessTab(None, f"{t('process')}{len(self.processes) + 1}", self.process_tabs, self.tool_name)
             tab_index = self.process_tabs.addTab(process_tab, f"{t('process')}{len(self.processes) + 1}")
             self.process_tabs.setCurrentIndex(tab_index)
         else:
@@ -662,7 +699,7 @@ class ToolOperationPage(QWidget):
 
             if current_index < 0 or t("system_log") in current_tab_text:
 
-                process_tab = ProcessTab(None, f"{t('process')}{len(self.processes) + 1}", self.process_tabs)
+                process_tab = ProcessTab(None, f"{t('process')}{len(self.processes) + 1}", self.process_tabs, self.tool_name)
                 tab_index = self.process_tabs.addTab(process_tab, f"{t('process')}{len(self.processes) + 1}")
                 self.process_tabs.setCurrentIndex(tab_index)
             else:
@@ -684,9 +721,25 @@ class ToolOperationPage(QWidget):
         venv_path = self.venv_input.text().strip()
         custom_env = self.env_input.text().strip()
 
-        command, env = self.env_manager.create_subprocess_wrapper(
-            tool_path, user_command, params, venv_path, custom_env
-        )
+        tool_python = self.env_manager.get_effective_python_for_tool(self.tool_name)
+        if tool_python is None:
+            self.system_log_tab.append_system_log(f"{t('no_python_for_tool')}: {self.tool_name}", "error")
+            self.system_log_tab.append_system_log(f"{t('python_setup_required')}", "warning")
+            return
+
+        if not self.env_manager._test_python_executable(tool_python):
+            self.system_log_tab.append_system_log(f"{t('tool_python_invalid')}: {tool_python}", "error")
+            self.system_log_tab.append_system_log(f"{t('please_select_valid_python')}", "warning")
+            return
+
+        try:
+            command, env = self.env_manager.create_subprocess_wrapper(
+                tool_path, user_command, params, venv_path, custom_env, self.tool_name
+            )
+        except RuntimeError as e:
+            self.system_log_tab.append_system_log(str(e), "error")
+            self.system_log_tab.append_system_log(f"{t('please_configure_python_manually')}", "warning")
+            return
         
         process = ToolProcess(self, process_tab)
         process_tab.process = process
@@ -1680,19 +1733,10 @@ class ToolOperationPage(QWidget):
             except Exception as e:
                 print(f"[DEBUG] {t('debug_failed_read_global_env')}: {e}")
 
-        python_path = config.get("python_path", "")
+        tool_python_path = config.get("tool_python_path", "")
+        if tool_python_path:
+            self.env_manager.set_tool_specific_python(self.tool_name, tool_python_path)
 
-        if self.env_manager:
-            auto_detected = self.env_manager.get_auto_detected_python_path()
-            self.python_input.setPlaceholderText(auto_detected)
-
-            if not python_path:
-                python_path = auto_detected
-                
-        self.python_input.setText(python_path)
-        if python_path:
-            self.env_manager.set_manual_python_path(python_path)
-        
         self.venv_input.setText(config.get("venv_path", ""))
         self.env_input.setText(config.get("custom_env", ""))
 
@@ -1700,14 +1744,10 @@ class ToolOperationPage(QWidget):
         
         tool_env_path = os.path.join("tools", self.tool_name, "env_config.json")
 
-        python_path = self.python_input.text().strip()
-        if python_path:
-            self.env_manager.set_manual_python_path(python_path)
-        else:
-            self.env_manager.reset_manual_python_path()
+        selected_python = self.python_selector.currentData()
         
         config = {
-            "python_path": python_path,
+            "tool_python_path": selected_python or "",
             "venv_path": self.venv_input.text().strip(),
             "custom_env": self.env_input.text().strip()
         }
@@ -1733,17 +1773,155 @@ class ToolOperationPage(QWidget):
             if selected_files:
                 python_path = selected_files[0]
 
-                if self.env_manager.set_manual_python_path(python_path):
-                    self.python_input.setText(python_path)
+                pass
+
+    def init_python_selector(self):
+        
+        try:
+
+            self.python_selector.currentTextChanged.connect(self.on_python_selection_changed)
+
+            self.refresh_python_list()
+
+            self.load_tool_python_config()
+            
+        except Exception as e:
+            if self.system_log_tab:
+                self.system_log_tab.append_system_log(f"Python选择器初始化失败: {e}", "error")
+    
+    def refresh_python_list(self):
+        
+        try:
+
+            self.python_selector.clear()
+
+            self.python_selector.addItem(t("auto_detect_python"), "")
+
+            available_pythons = self.env_manager.get_all_available_pythons()
+            
+            for python_info in available_pythons:
+                display_text = python_info['display_name']
+                if python_info['is_current_system']:
+                    display_text += f" [{t('system')}]"
+                elif python_info['is_manual']:
+                    display_text += f" [{t('manual')}]"
+                
+                self.python_selector.addItem(display_text, python_info['path'])
+            
+            if self.system_log_tab:
+                self.system_log_tab.append_system_log(
+                    f"{t('python_list_refreshed')}: {len(available_pythons)} {t('interpreters_found')}", 
+                    "info"
+                )
+            
+        except Exception as e:
+            if self.system_log_tab:
+                self.system_log_tab.append_system_log(f"{t('refresh_python_failed')}: {e}", "error")
+    
+    def on_python_selection_changed(self, text):
+        
+        try:
+            current_data = self.python_selector.currentData()
+
+            if self.env_manager.set_tool_specific_python(self.tool_name, current_data):
+                if current_data:
                     if self.system_log_tab:
                         self.system_log_tab.append_system_log(
-                            f"{t('python_path_updated')}: {python_path}", 
+                            f"{t('tool_python_updated')}: {self.tool_name} -> {current_data}", 
                             "success"
                         )
                 else:
+                    if self.system_log_tab:
+                        self.system_log_tab.append_system_log(
+                            f"{t('tool_python_auto_detect')}: {self.tool_name}", 
+                            "info"
+                        )
+            
+        except Exception as e:
+            if self.system_log_tab:
+                self.system_log_tab.append_system_log(f"{t('python_selection_error')}: {e}", "error")
+    
+    def browse_python_interpreter(self):
+        
+        try:
+            from PySide6.QtWidgets import QFileDialog
+            
+            if os.name == "nt":
+                file_filter = "Python Executable (python.exe);;All Files (*)"
+            else:
+                file_filter = "Python Executable (python python3);;All Files (*)"
+            
+            python_path, _ = QFileDialog.getOpenFileName(
+                self,
+                t("select_python_interpreter"),
+                "",
+                file_filter
+            )
+            
+            if python_path:
 
+                if self.env_manager._test_python_executable(python_path):
+
+                    self.add_python_to_selector(python_path)
+
+                    index = self.python_selector.findData(python_path)
+                    if index >= 0:
+                        self.python_selector.setCurrentIndex(index)
+                    
+                    if self.system_log_tab:
+                        self.system_log_tab.append_system_log(
+                            f"{t('custom_python_added')}: {python_path}", 
+                            "success"
+                        )
+                else:
+                    from PySide6.QtWidgets import QMessageBox
                     QMessageBox.warning(
-                        self, 
-                        t("python_path_invalid"), 
-                        f"{t('python_test_failed')}: {python_path}"
+                        self,
+                        t("invalid_python_interpreter"),
+                        t("selected_file_not_valid_python")
                     )
+            
+        except Exception as e:
+            if self.system_log_tab:
+                self.system_log_tab.append_system_log(f"{t('browse_python_error')}: {e}", "error")
+    
+    def add_python_to_selector(self, python_path):
+        
+        try:
+
+            for i in range(self.python_selector.count()):
+                if self.python_selector.itemData(i) == python_path:
+                    return
+
+            python_info = self.env_manager.get_python_info(python_path)
+            if python_info and python_info.get('valid', False):
+                display_name = f"Python {python_info.get('version', 'Unknown')} ({python_path}) [Custom]"
+                self.python_selector.addItem(display_name, python_path)
+            
+        except Exception as e:
+            if self.system_log_tab:
+                self.system_log_tab.append_system_log(f"{t('add_python_error')}: {e}", "error")
+    
+    def load_tool_python_config(self):
+        
+        try:
+            tool_python = self.env_manager.get_tool_specific_python(self.tool_name)
+            
+            if tool_python:
+
+                index = self.python_selector.findData(tool_python)
+                if index >= 0:
+                    self.python_selector.setCurrentIndex(index)
+                else:
+
+                    self.add_python_to_selector(tool_python)
+                    index = self.python_selector.findData(tool_python)
+                    if index >= 0:
+                        self.python_selector.setCurrentIndex(index)
+            else:
+
+                self.python_selector.setCurrentIndex(0)
+            
+        except Exception as e:
+            if self.system_log_tab:
+                self.system_log_tab.append_system_log(f"{t('load_tool_python_config_error')}: {e}", "error")
