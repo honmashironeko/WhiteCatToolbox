@@ -4,7 +4,7 @@
 
 ![Logo](favicon.ico)
 
-[![Version](https://img.shields.io/badge/version-0.5_beta-blue.svg)](https://github.com/whitecattoolbox/releases)
+[![Version](https://img.shields.io/badge/version-0.0.6-blue.svg)](https://github.com/whitecattoolbox/releases)
 [![Python](https://img.shields.io/badge/python-3.11+-brightgreen.svg)](https://www.python.org/)
 [![Platform](https://img.shields.io/badge/platform-Windows%20%7C%20Linux%20%7C%20macOS-lightgrey.svg)](https://github.com/whitecattoolbox)
 [![License](https://img.shields.io/badge/license-MIT-orange.svg)](LICENSE)
@@ -50,9 +50,9 @@ WhiteCat Toolbox（白猫工具箱）是一款现代化的命令行工具集成�
 ### WhiteCat Toolbox的核心价值是什么？
 
 - **学习成本降低**：可视化的图形操作和悬浮弹窗介绍参数信息将带来简单易懂的功能介绍，不再需要到help信息里一点一点查询
-- 工作效率提升：强大的模版化操作可将固定流程快速应用；按工具分类展示的多进程标签页允许您在一个工具下运行多个相同程序或不同参数，增加的运行结束提示功能将让您及时知晓进度
+- **工作效率提升**：强大的模版化操作可将固定流程快速应用；按工具分类展示的多进程标签页允许您在一个工具下运行多个相同程序或不同参数，增加的运行结束提示功能将让您及时知晓进度
 
-- **环境配置统一**：支持单独Python解释器选择、Python虚拟环境选择、自定义环境变量，使得您可以在一个页面下使用多种不同的环境运行，更加轻松便捷
+- **环境配置统一**：支持单独Python解释器选择、Python虚拟环境选择、自定义环境变量，使得您可以在一个页面下使用多种不同的环境运行，更加轻松便捷；同时**能够快速切换Python版本来进行测试，为开发提供助力！**
 
 ### WhiteCat Toolbox的发展需要大家的支持
 
@@ -87,6 +87,7 @@ WhiteCat Toolbox（白猫工具箱）是一款现代化的命令行工具集成�
 - **Python环境管理**：每个工具独立的Python环境
 - **自动检测**：智能检测系统Python和虚拟环境
 - **依赖隔离**：避免不同工具的依赖冲突
+- **Python解释器**：快速选择不同版本的Python用于测试
 
 ### 📊 进程监控
 - **实时输出**：彩色显示工具输出，支持ANSI转义序列
@@ -559,6 +560,7 @@ WhiteCatToolbox/
 │   ├── process.py         # 进程管理
 │   ├── parameters.py      # 参数管理
 │   ├── env_manager.py     # 环境管理
+│   ├── log_manager.py	   # 日志管理
 │   ├── config.py          # 配置解析
 │   ├── templates.py       # 模板系统
 │   ├── promotion.py       # 推广页面
@@ -658,7 +660,15 @@ WhiteCatToolbox/
 
 ## 📝 更新日志
 
-### v0.5 Beta (2025-01-15)
+### v0.0.6 （2025-07-15）
+
+🎉 **重大更新**
+
+- 优化终端搜索功能，减少资源消耗
+- 增加终端日志保存功能
+- 修改Python解释器逻辑，采用扫描+手动选择的方式指定，可快速修改
+
+### v0.0.5 （2025-07-15)
 
 🎉 **重大更新**
 
@@ -669,7 +679,7 @@ WhiteCatToolbox/
 - 📋 新增参数模板系统
 - 🔄 优化更新检查机制，支持SHA校验
 
-### v0.4 Beta (2024-12-20)
+### v0.0.4 (2025-07-09)
 
 🔧 **功能改进**
 
@@ -678,7 +688,7 @@ WhiteCatToolbox/
 - 📊 改进进程监控，支持彩色输出
 - 🛠️ 修复已知Bug若干
 
-### v0.3 Beta (2024-11-15)
+### v0.0.3 (2025-07-07)
 
 📦 **基础功能**
 
@@ -687,7 +697,7 @@ WhiteCatToolbox/
 - 🖥️ 实现多进程标签页
 - 🔧 基础的配置文件解析
 
-### v0.2 Alpha (2024-10-01)
+### v0.0.2 (2025-07-04)
 
 🚀 **初始版本**
 
