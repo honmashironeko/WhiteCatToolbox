@@ -76,7 +76,7 @@ jobs:
         copy dist\whitecattoolbox.exe dist-package\
         xcopy config dist-package\config\ /E /I
         xcopy promotion dist-package\promotion\ /E /I
-        xcopy tools dist-package\tools\ /E /I
+        mkdir dist-package\tools
         
     - name: Copy files to distribution (macOS/Linux)
       if: matrix.os != 'windows-latest'
@@ -84,7 +84,7 @@ jobs:
         cp dist/whitecattoolbox dist-package/
         cp -r config dist-package/
         cp -r promotion dist-package/
-        cp -r tools dist-package/
+        mkdir -p dist-package/tools
         
     - name: Create archive (Windows)
       if: matrix.os == 'windows-latest'
