@@ -5,7 +5,7 @@ a = Analysis(
     ['main.py'],
     pathex=[],
     binaries=[],
-    datas=[('wct_modules', 'wct_modules'), ('favicon.ico', '.'), ('sitecustomize.py', '.'), ('config', 'config'), ('tools', 'tools'), ('templates', 'templates'), ('promotion', 'promotion')],
+    datas=[('wct_modules', 'wct_modules'), ('favicon.ico', '.'), ('config', 'config'), ('tools', 'tools'), ('promotion', 'promotion')],
     hiddenimports=['PySide6.QtCore', 'PySide6.QtWidgets', 'PySide6.QtGui'],
     hookspath=[],
     hooksconfig={},

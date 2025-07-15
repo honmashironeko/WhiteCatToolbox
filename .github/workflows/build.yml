@@ -59,12 +59,12 @@ jobs:
     - name: Build with PyInstaller (Windows)
       if: matrix.os == 'windows-latest'
       run: |
-        pyinstaller --onefile --windowed --name whitecattoolbox --icon favicon.ico --add-data "wct_modules;wct_modules" --add-data "favicon.ico;." --add-data "sitecustomize.py;." main.py
+        pyinstaller --onefile --windowed --name whitecattoolbox --icon favicon.ico --add-data "wct_modules;wct_modules" --add-data "favicon.ico;." main.py
         
     - name: Build with PyInstaller (macOS/Linux)
       if: matrix.os != 'windows-latest'
       run: |
-        pyinstaller --onefile --windowed --name whitecattoolbox --icon favicon.ico --add-data "wct_modules:wct_modules" --add-data "favicon.ico:." --add-data "sitecustomize.py:." main.py
+        pyinstaller --onefile --windowed --name whitecattoolbox --icon favicon.ico --add-data "wct_modules:wct_modules" --add-data "favicon.ico:." main.py
         
     - name: Create distribution directory
       run: |
@@ -76,6 +76,7 @@ jobs:
         copy dist\whitecattoolbox.exe dist-package\
         xcopy config dist-package\config\ /E /I
         xcopy promotion dist-package\promotion\ /E /I
+        xcopy tools dist-package\tools\ /E /I
         
     - name: Copy files to distribution (macOS/Linux)
       if: matrix.os != 'windows-latest'
@@ -83,6 +84,7 @@ jobs:
         cp dist/whitecattoolbox dist-package/
         cp -r config dist-package/
         cp -r promotion dist-package/
+        cp -r tools dist-package/
         
     - name: Create archive (Windows)
       if: matrix.os == 'windows-latest'
