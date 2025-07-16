@@ -77,8 +77,6 @@ jobs:
         xcopy config dist-package\config\ /E /I
         xcopy promotion dist-package\promotion\ /E /I
         mkdir dist-package\tools
-        copy README.md .\
-        xcopy README.assets .\ /E /I
         
     - name: Copy files to distribution (macOS/Linux)
       if: matrix.os != 'windows-latest'
@@ -87,8 +85,6 @@ jobs:
         cp -r config dist-package/
         cp -r promotion dist-package/
         mkdir -p dist-package/tools
-        cp README.md ./
-        cp -r README.assets ./
         
     - name: Create archive (Windows)
       if: matrix.os == 'windows-latest'
