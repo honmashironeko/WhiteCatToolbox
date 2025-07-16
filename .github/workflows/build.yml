@@ -77,6 +77,8 @@ jobs:
         xcopy config dist-package\config\ /E /I
         xcopy promotion dist-package\promotion\ /E /I
         mkdir dist-package\tools
+        copy README.md .\
+        xcopy README.assets .\ /E /I
         
     - name: Copy files to distribution (macOS/Linux)
       if: matrix.os != 'windows-latest'
@@ -85,24 +87,26 @@ jobs:
         cp -r config dist-package/
         cp -r promotion dist-package/
         mkdir -p dist-package/tools
+        cp README.md ./
+        cp -r README.assets ./
         
     - name: Create archive (Windows)
       if: matrix.os == 'windows-latest'
       run: |
         cd dist-package
-        7z a -tzip ../whitecattoolbox-${{ matrix.arch }}.zip *
+        7z a -tzip ../${{ matrix.artifact-name }}.zip *
         
     - name: Create archive (macOS/Linux)
       if: matrix.os != 'windows-latest'
       run: |
         cd dist-package
-        tar -czf ../whitecattoolbox-${{ matrix.arch }}.tar.gz *
+        tar -czf ../${{ matrix.artifact-name }}.tar.gz *
         
     - name: Upload artifact
       uses: actions/upload-artifact@v4
       with:
         name: ${{ matrix.artifact-name }}
-        path: whitecattoolbox-${{ matrix.arch }}.${{ matrix.archive-ext }}
+        path: ${{ matrix.artifact-name }}.${{ matrix.archive-ext }}
         retention-days: 30
         
     - name: Upload release asset
@@ -112,6 +116,6 @@ jobs:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       with:
         upload_url: ${{ github.event.release.upload_url }}
-        asset_path: whitecattoolbox-${{ matrix.arch }}.${{ matrix.archive-ext }}
+        asset_path: ${{ matrix.artifact-name }}.${{ matrix.archive-ext }}
         asset_name: ${{ matrix.artifact-name }}.${{ matrix.archive-ext }}
         asset_content_type: application/octet-stream

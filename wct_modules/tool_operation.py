@@ -1716,7 +1716,7 @@ class ToolOperationPage(QWidget):
     def load_env_config(self):
         
         tool_env_path = os.path.join("tools", self.tool_name, "env_config.json")
-        global_env_path = "global_env_config.json"
+        global_env_path = os.path.join("config", "global_env_config.json")
         config = {"python_path": "", "venv_path": "", "custom_env": ""}
         if os.path.exists(tool_env_path):
             try:
@@ -1793,11 +1793,12 @@ class ToolOperationPage(QWidget):
         
         try:
 
+            current_selection = self.python_selector.currentData()
+
             self.python_selector.clear()
 
             self.python_selector.addItem(t("auto_detect_python"), "")
-
-            available_pythons = self.env_manager.get_all_available_pythons()
+            available_pythons = self.env_manager.get_all_available_pythons_with_custom()
             
             for python_info in available_pythons:
                 display_text = python_info['display_name']
@@ -1805,8 +1806,14 @@ class ToolOperationPage(QWidget):
                     display_text += f" [{t('system')}]"
                 elif python_info['is_manual']:
                     display_text += f" [{t('manual')}]"
+                elif python_info.get('is_custom', False):
+                    display_text += f" [{t('custom')}]"
                 
                 self.python_selector.addItem(display_text, python_info['path'])
+            if current_selection:
+                index = self.python_selector.findData(current_selection)
+                if index >= 0:
+                    self.python_selector.setCurrentIndex(index)
             
             if self.system_log_tab:
                 self.system_log_tab.append_system_log(
@@ -1895,8 +1902,13 @@ class ToolOperationPage(QWidget):
 
             python_info = self.env_manager.get_python_info(python_path)
             if python_info and python_info.get('valid', False):
-                display_name = f"Python {python_info.get('version', 'Unknown')} ({python_path}) [Custom]"
-                self.python_selector.addItem(display_name, python_path)
+
+                if self.env_manager.add_custom_python_path(python_path):
+                    display_name = f"Python {python_info.get('version', 'Unknown')} ({python_path}) [Custom]"
+                    self.python_selector.addItem(display_name, python_path)
+                else:
+                    if self.system_log_tab:
+                        self.system_log_tab.append_system_log(f"保存自定义Python路径失败: {python_path}", "error")
             
         except Exception as e:
             if self.system_log_tab:

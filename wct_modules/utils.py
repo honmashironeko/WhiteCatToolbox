@@ -38,10 +38,6 @@ def get_monospace_font_css():
     return f"font-family: '{mono_font}', 'Consolas', 'Monaco', 'Courier New', monospace;"
 
 def normalize_path_separators(path, system):
-    """
-    Normalize path separators based on the operating system.
-    Only converts paths that look like file paths (contain / or \).
-    """
     if not path or not isinstance(path, str):
         return path
 
@@ -187,17 +183,15 @@ def s(value):
 load_scale_factor() 
 
 def get_optimized_subprocess_kwargs():
-    """获取优化的subprocess启动参数"""
+    
     kwargs = {}
     
     if platform.system() == "Windows":
-        # Windows下隐藏控制台窗口
+
         startupinfo = subprocess.STARTUPINFO()
         startupinfo.dwFlags |= subprocess.STARTF_USESHOWWINDOW
         startupinfo.wShowWindow = subprocess.SW_HIDE
         kwargs['startupinfo'] = startupinfo
-        
-        # 设置创建标志
         kwargs['creationflags'] = subprocess.CREATE_NO_WINDOW
     
     return kwargs 

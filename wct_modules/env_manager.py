@@ -1,8 +1,3 @@
-"""
-Environment Manager for WhiteCat Toolbox
-Handles Python environment isolation for packaged executables
-"""
-
 import os
 import sys
 import subprocess
@@ -24,8 +19,29 @@ class EnvironmentManager:
         self._python_cache = {}
         self._cache_expiry = 300
         self._last_check_time = {}
+        self._validate_custom_python_paths()
         
         self._init_system_python()
+    
+    def _validate_custom_python_paths(self):
+        
+        try:
+            config = self._load_global_config()
+            custom_paths = config.get("custom_python_paths", [])
+            valid_paths = []
+            
+            for path in custom_paths:
+                if os.path.exists(path) and self._test_python_executable(path):
+                    valid_paths.append(path)
+                elif self.logger:
+                    self.logger.append_system_log(f"移除无效的自定义Python路径: {path}", "warning")
+            if len(valid_paths) != len(custom_paths):
+                config["custom_python_paths"] = valid_paths
+                self._save_global_config(config)
+                
+        except Exception as e:
+            if self.logger:
+                self.logger.append_system_log(f"验证自定义Python路径时出错: {e}", "error")
     
     def set_manual_python_path(self, python_path):
         if python_path and os.path.exists(python_path):
@@ -113,7 +129,13 @@ class EnvironmentManager:
             self.system_python_path = sys.executable
             return
 
+        if self.logger:
+            self.logger.append_system_log("开始在打包环境中搜索Python解释器", "info")
+
         python_candidates = self._get_python_candidates()
+        
+        if self.logger:
+            self.logger.append_system_log(f"基础候选路径: {python_candidates}", "debug")
 
         for candidate in python_candidates:
             if self._test_python_executable(candidate):
@@ -126,7 +148,13 @@ class EnvironmentManager:
                 return
 
         if not self.system_python_path:
+            if self.logger:
+                self.logger.append_system_log("基础搜索失败，尝试扩展搜索", "debug")
+            
             extended_candidates = self._get_extended_python_candidates()
+            if self.logger:
+                self.logger.append_system_log(f"扩展候选路径: {extended_candidates[:5]}...", "debug")
+            
             for candidate in extended_candidates:
                 if self._test_python_executable(candidate):
                     self.system_python_path = candidate
@@ -138,6 +166,8 @@ class EnvironmentManager:
                     return
 
         if not self.system_python_path:
+            if self.logger:
+                self.logger.append_system_log("扩展搜索失败，尝试回退方案", "debug")
 
             fallback_python = self._find_fallback_python()
             if fallback_python:
@@ -158,11 +188,14 @@ class EnvironmentManager:
     
     def _get_python_candidates(self):
         candidates = []
-
-        candidates.extend(["python", "python3", "python.exe"])
-
         if not self.is_frozen:
+            candidates.extend(["python", "python3", "python.exe"])
             return candidates
+        import shutil
+        for cmd in ["python", "python3", "python.exe"]:
+            python_path = shutil.which(cmd)
+            if python_path and python_path not in candidates:
+                candidates.append(python_path)
         
         if os.name == "nt":
 
@@ -431,6 +464,10 @@ class EnvironmentManager:
             last_check = self._last_check_time.get(python_path, 0)
             if current_time - last_check < self._cache_expiry:
                 return self._python_cache[python_path]
+        if os.path.isabs(python_path) and not os.path.exists(python_path):
+            self._python_cache[python_path] = False
+            self._last_check_time[python_path] = current_time
+            return False
         
         try:
 
@@ -451,12 +488,23 @@ class EnvironmentManager:
             is_valid = result.returncode == 0
             self._python_cache[python_path] = is_valid
             self._last_check_time[python_path] = current_time
+            if self.is_frozen and self.logger:
+                if is_valid:
+                    self.logger.append_system_log(f"Python验证成功: {python_path}", "debug")
+                else:
+                    self.logger.append_system_log(
+                        f"Python验证失败: {python_path} (返回码: {result.returncode}, 错误: {result.stderr})", 
+                        "debug"
+                    )
             
             return is_valid
-        except (subprocess.SubprocessError, FileNotFoundError, subprocess.TimeoutExpired):
+        except (subprocess.SubprocessError, FileNotFoundError, subprocess.TimeoutExpired) as e:
 
             self._python_cache[python_path] = False
             self._last_check_time[python_path] = current_time
+            if self.is_frozen and self.logger:
+                self.logger.append_system_log(f"Python测试异常: {python_path} - {str(e)}", "debug")
+            
             return False
     
     def get_python_command(self, original_command, tool_name=None):
@@ -707,3 +755,110 @@ cd "{tool_path}"
             return tool_python
 
         return self.get_effective_python_path()
+    
+    def _get_global_config_path(self):
+        
+        return os.path.join("config", "global_env_config.json")
+    
+    def _load_global_config(self):
+        
+        config_path = self._get_global_config_path()
+        if os.path.exists(config_path):
+            try:
+                with open(config_path, "r", encoding="utf-8") as f:
+                    return json.load(f)
+            except Exception as e:
+                if self.logger:
+                    self.logger.append_system_log(f"加载全局配置失败: {e}", "error")
+        return {}
+    
+    def _save_global_config(self, config):
+        
+        config_path = self._get_global_config_path()
+        try:
+            with open(config_path, "w", encoding="utf-8") as f:
+                json.dump(config, f, ensure_ascii=False, indent=2)
+            return True
+        except Exception as e:
+            if self.logger:
+                self.logger.append_system_log(f"保存全局配置失败: {e}", "error")
+            return False
+    
+    def get_custom_python_paths(self):
+        
+        config = self._load_global_config()
+        return config.get("custom_python_paths", [])
+    
+    def add_custom_python_path(self, python_path):
+        
+        if not python_path or not os.path.exists(python_path):
+            return False
+            
+        if not self._test_python_executable(python_path):
+            return False
+        
+        config = self._load_global_config()
+        custom_paths = config.get("custom_python_paths", [])
+        if python_path not in custom_paths:
+            custom_paths.append(python_path)
+            config["custom_python_paths"] = custom_paths
+            
+            if self._save_global_config(config):
+                if self.logger:
+                    self.logger.append_system_log(f"自定义Python路径已保存: {python_path}", "info")
+                return True
+        
+        return True
+    
+    def remove_custom_python_path(self, python_path):
+        
+        config = self._load_global_config()
+        custom_paths = config.get("custom_python_paths", [])
+        
+        if python_path in custom_paths:
+            custom_paths.remove(python_path)
+            config["custom_python_paths"] = custom_paths
+            
+            if self._save_global_config(config):
+                if self.logger:
+                    self.logger.append_system_log(f"自定义Python路径已移除: {python_path}", "info")
+                return True
+        
+        return False
+    
+    def get_all_available_pythons_with_custom(self):
+        
+        pythons = []
+        seen_paths = set()
+        all_candidates = []
+        all_candidates.extend(self._get_python_candidates())
+        all_candidates.extend(self._get_extended_python_candidates())
+        if self.system_python_path and self.system_python_path not in all_candidates:
+            all_candidates.insert(0, self.system_python_path)
+
+        if self.manual_python_path and self.manual_python_path not in all_candidates:
+            all_candidates.insert(0, self.manual_python_path)
+        custom_paths = self.get_custom_python_paths()
+        for custom_path in custom_paths:
+            if custom_path not in all_candidates:
+                all_candidates.insert(0, custom_path)
+        for candidate in all_candidates:
+            if not candidate or candidate in seen_paths:
+                continue
+                
+            seen_paths.add(candidate)
+
+            python_info = self.get_python_info(candidate)
+            if python_info and python_info.get('valid', False):
+                is_custom = candidate in custom_paths
+                pythons.append({
+                    'path': candidate,
+                    'version': python_info.get('version', 'Unknown'),
+                    'platform': python_info.get('platform', 'Unknown'),
+                    'display_name': f"Python {python_info.get('version', 'Unknown')} ({candidate})",
+                    'is_current_system': candidate == self.system_python_path,
+                    'is_manual': candidate == self.manual_python_path,
+                    'is_custom': is_custom
+                })
+        
+        return pythons

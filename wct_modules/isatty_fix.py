@@ -1,8 +1,3 @@
-"""
-IsATTY Fix Module for WhiteCat Toolbox
-提供 isatty() 修复功能，支持子进程注入
-"""
-
 import sys
 import os
 from types import MethodType
@@ -30,9 +25,6 @@ except Exception:
 '''
 
 def apply_isatty_fix():
-    """
-    直接应用 isatty 修复到当前进程
-    """
     def _always_true(*args, **kwargs):
         return True
 
@@ -50,15 +42,6 @@ def apply_isatty_fix():
         pass
 
 def get_python_command_with_isatty_fix(original_command):
-    """
-    将原始 Python 命令包装为带有 isatty 修复的命令
-    
-    Args:
-        original_command (list): 原始命令列表
-    
-    Returns:
-        list: 包装后的命令列表
-    """
     if not original_command:
         return original_command
 
@@ -141,16 +124,6 @@ sys.exit(subprocess.call({repr(original_command[1:])}, env=os.environ))
     return [original_command[0], '-c', exec_code]
 
 def wrap_python_script_with_isatty_fix(script_path, script_args=None):
-    """
-    包装 Python 脚本，使其在启动时应用 isatty 修复
-    
-    Args:
-        script_path (str): Python 脚本路径
-        script_args (list): 脚本参数
-    
-    Returns:
-        str: 包装后的执行代码
-    """
     if script_args is None:
         script_args = []
 

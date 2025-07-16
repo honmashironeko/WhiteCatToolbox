@@ -40,15 +40,11 @@ class PromotionPage(QWidget):
             print(f"{t('save_promotion_failed')}: {e}")
     
     def setup_ui(self):
-        
-
         scroll_area = QScrollArea()
         scroll_area.setWidgetResizable(True)
         scroll_area.setHorizontalScrollBarPolicy(Qt.ScrollBarAsNeeded)
         scroll_area.setVerticalScrollBarPolicy(Qt.ScrollBarAsNeeded)
         scroll_area.setStyleSheet("QScrollArea { border: none; background: transparent; }")
-        
-
         content_widget = QWidget()
         content_widget.setMinimumWidth(s(1200))
         
@@ -103,14 +99,8 @@ class PromotionPage(QWidget):
         self.content_widget = QWidget()
         self.setup_content()
         layout.addWidget(self.content_widget)
-        
-
         content_widget.setLayout(layout)
-        
-
         scroll_area.setWidget(content_widget)
-        
-
         main_layout = QVBoxLayout()
         main_layout.setContentsMargins(0, 0, 0, 0)
         main_layout.addWidget(scroll_area)
