@@ -57,11 +57,11 @@ class ProcessManager(QObject):
         try:
             import winpty
             
-
+            # 尝试使用 pywinpty
             if not command_parts or not isinstance(command_parts, list):
                 raise ValueError("Invalid command_parts")
                 
-
+            # 构建命令字符串
             command_str = ' '.join(f'"{part}"' if ' ' in str(part) else str(part) for part in command_parts)
             
             pty_process = winpty.PtyProcess.spawn(
