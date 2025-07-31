@@ -3,7 +3,6 @@ from PySide6.QtCore import QObject, Signal
 from PySide6.QtGui import QPalette, QColor
 import json
 from pathlib import Path
-from .utils import get_project_root
 
 class ThemeManager(QObject):
     theme_changed = Signal(str)
@@ -440,9 +439,9 @@ class ThemeManager(QObject):
     
     def get_theme_css_file(self):
         """获取当前主题的CSS文件路径"""
-        # 修复PyInstaller路径问题
-        project_root = get_project_root()
-        theme_dir = project_root / "assets" / "themes"
+        from pathlib import Path
+        app_dir = Path(__file__).parent.parent
+        theme_dir = app_dir / "assets" / "themes"
         theme_file = theme_dir / f"{self.current_theme}.css"
         return theme_file
     

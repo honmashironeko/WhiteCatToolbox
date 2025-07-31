@@ -1,9 +1,9 @@
-# 🐱 WhiteCat Toolbox - 白猫工具箱
+# 🐱 White Cat Toolbox - 白猫工具箱
 
 
 ![Logo](favicon.ico)
 
-[![Version](https://img.shields.io/badge/version-0.0.6-blue.svg)](https://github.com/whitecattoolbox/releases)
+[![Version](https://img.shields.io/badge/version-0.1.0-blue.svg)](https://github.com/whitecattoolbox/releases)
 [![Python](https://img.shields.io/badge/python-3.11+-brightgreen.svg)](https://www.python.org/)
 [![Platform](https://img.shields.io/badge/platform-Windows%20%7C%20Linux%20%7C%20macOS-lightgrey.svg)](https://github.com/whitecattoolbox)
 [![License](https://img.shields.io/badge/license-MIT-orange.svg)](LICENSE)
@@ -36,24 +36,24 @@
 
 ## 🌟 项目简介
 
-WhiteCat Toolbox（白猫工具箱）是一款现代化的命令行工具集成图形化管理平台，旨在为专业人员和初学者提供统一、高效的工具管理和使用体验。通过优雅的图形界面和智能的环境管理，让复杂的命令行工具变得简单易用。
+White Cat Toolbox（白猫工具箱）是一款现代化的命令行工具集成图形化管理平台，旨在为专业人员和初学者提供统一、高效的工具管理和使用体验。通过优雅的图形界面和智能的环境管理，让复杂的命令行工具变得简单易用。
 
-### 为什么选择 WhiteCat Toolbox？
+### 为什么选择 White Cat Toolbox？
 
 - 🎨 **现代化界面**：基于 PySide6 (Qt) 构建的美观界面
 - 🔌 **即插即用**：简单的配置文件即可集成新工具，无需修改代码
 - 🌍 **跨平台支持**：完美支持 Windows、Linux 和 macOS
 - 🐍 **智能环境管理**：自动隔离 Python 环境，避免依赖冲突
-- 🚀 **高效工作流**：参数模板、批量执行、历史记录、多进程运行等提升效率
+- 🚀 **高效工作流**：参数模板、批量执行、多进程运行等提升效率
 
-### WhiteCat Toolbox的核心价值是什么？
+### White Cat Toolbox的核心价值是什么？
 
 - **学习成本降低**：可视化的图形操作和悬浮弹窗介绍参数信息将带来简单易懂的功能介绍，不再需要到help信息里一点一点查询
 - **工作效率提升**：强大的模版化操作可将固定流程快速应用；按工具分类展示的多进程标签页允许您在一个工具下运行多个相同程序或不同参数，增加的运行结束提示功能将让您及时知晓进度
 
-- **环境配置统一**：支持单独Python解释器选择、Python虚拟环境选择、自定义环境变量，使得您可以在一个页面下使用多种不同的环境运行，更加轻松便捷；同时**能够快速切换Python版本来进行测试，为开发提供助力！**
+- **环境配置统一**：支持单独解释器选择、Python虚拟环境选择、自定义环境变量，使得您可以在一个页面下使用多种不同的环境运行，更加轻松便捷；同时**能够快速切换Python、Java版本来进行测试，为开发提供助力！**
 
-### WhiteCat Toolbox的发展需要大家的支持
+### White Cat Toolbox的发展需要大家的支持
 
 - **本项目仅提供内测版和公测版，但不提供付费版，这意味着您无需任何费用即可使用！**
 - **仅接受开源赞助打赏与企业赞助商赞助用以维持项目运转维护**，皆为自愿原则，项目不会以任何方式强制付费！
@@ -72,7 +72,7 @@ WhiteCat Toolbox（白猫工具箱）是一款现代化的命令行工具集成�
 
 ### 🌈 用户体验
 - **多语言支持**：内置中英文界面，可扩展其他语言
-- **界面缩放**：6级缩放模式，从紧凑到超大，适应不同显示器
+- **界面缩放**：80%-300%比例缩放，适应不同显示器
 - **智能搜索**：支持模糊/精确/正则三种搜索模式
 - **拖拽排序**：参数可自由拖拽调整顺序
 
@@ -84,18 +84,17 @@ WhiteCat Toolbox（白猫工具箱）是一款现代化的命令行工具集成�
 
 ### 🐍 环境隔离
 - **Python环境管理**：每个工具独立的Python环境
-- **自动检测**：智能检测系统Python和虚拟环境
+- **自动检测**：智能检测解释器和虚拟环境
 - **依赖隔离**：避免不同工具的依赖冲突
-- **Python解释器**：快速选择不同版本的Python用于测试
+- **解释器**：快速选择不同版本的Python、Java用于测试
 
 ### 📊 进程监控
 - **实时输出**：彩色显示工具输出，支持ANSI转义序列
 - **多标签页**：每个进程独立标签页，可同时查看多个输出
 - **状态显示**：实时显示进程运行状态
 - **结束检测**：运行完成界面提示
-- **历史记录**：保存命令历史，方便重复执行
 
-### 🔄 自动更新
+### 🔄 自动更新（暂未完成）
 - **版本检查**：启动时自动检查新版本
 - **GitHub集成**：通过GitHub API获取最新版本
 
@@ -112,12 +111,11 @@ WhiteCat Toolbox（白猫工具箱）是一款现代化的命令行工具集成�
 - 🔍 智能搜索：快速定位需要的参数
 - 📋 参数模板：保存和应用常用配置
 - ✅ 必填验证：确保关键参数不遗漏
+- 🔄 环境管理：配置独立的执行环境
 
 **右侧运行监控区**：
 - 🖥️ 终端输出：彩色显示命令执行结果
 - 📑 多进程标签：同时运行和监控多个实例
-- 🔄 环境管理：配置独立的执行环境
-- 📊 系统日志：查看详细的执行日志
 
 ### 2. 参数配置系统
 
@@ -140,13 +138,13 @@ WhiteCat Toolbox（白猫工具箱）是一款现代化的命令行工具集成�
 ### 3. 环境管理器
 
 **功能特性**：
-- 🔍 **自动检测**：扫描系统中的Python安装
-- 🎯 **手动指定**：选择特定的Python解释器
+- 🔍 **自动检测**：扫描系统中的解释器
+- 🎯 **手动指定**：选择特定的解释器
 - 📦 **虚拟环境**：支持venv和conda环境
 - 🔧 **环境配置**：为每个工具配置独立环境
 
 **使用场景**：
-- 工具依赖特定Python版本
+- 工具依赖特定Python、Java版本
 - 避免全局安装污染系统
 - 不同工具依赖冲突隔离
 - 测试不同环境下的工具表现
@@ -168,9 +166,10 @@ WhiteCat Toolbox（白猫工具箱）是一款现代化的命令行工具集成�
 ### 5. 推广系统
 
 **推广页面**：
-- 📢 **项目推荐**：展示优秀的安全项目
+- 📢 **项目推荐**：展示优秀的项目
 - 🏆 **赞助排行**：感谢支持项目的用户
 - 📜 **赞助历史**：记录所有赞助信息
+- 📢 **赞助企业**：赞助本项目的企业
 
 ---
 
@@ -188,7 +187,8 @@ WhiteCat Toolbox（白猫工具箱）是一款现代化的命令行工具集成�
 
 1. **克隆仓库**
 ```bash
-git clone https://github.com/yourusername/WhiteCatToolbox.git
+git clone https://github.com/honmashironeko/WhiteCatToolbox.git
+# or git clone https://gitcode.com/honmashironeko/WhiteCatToolbox.git
 cd WhiteCatToolbox
 ```
 
@@ -202,7 +202,7 @@ pip install -r requirements.txt
 python main.py
 ```
 
-#### 执行文件
+#### 执行文件（后续补充）
 
 1、下载系统对应的可执行文件
 
@@ -281,7 +281,7 @@ https://github.com/honmashironeko/WhiteCatToolbox/releases
 
 ## 🤖 配置教程
 
-为了简化配置文件的创建过程，WhiteCat Toolbox 提供了AI辅助生成功能。通过使用项目内置的提示词模板，您可以快速将任何命令行工具的帮助信息转换为标准的配置文件格式。
+为了简化配置文件的创建过程，White Cat Toolbox 提供了AI辅助生成功能。通过使用项目内置的提示词模板，您可以快速将任何命令行工具的帮助信息转换为标准的配置文件格式。
 
 ### 💡 使用场景
 
@@ -372,7 +372,7 @@ https://github.com/honmashironeko/WhiteCatToolbox/releases
    - 将 `[将此处替换为工具的help]` 替换为实际的工具帮助文本
 
 3. **获取结果**：
-   AI将自动生成符合WhiteCat Toolbox格式的配置文件内容
+   AI将自动生成符合White Cat Toolbox格式的配置文件内容
 
 #### 步骤3：完善配置文件
 
@@ -475,7 +475,7 @@ Target:
 2. **验证参数名称**：确保AI正确清理了占位符
 3. **翻译准确性**：检查中文翻译是否准确易懂
 4. **必填参数标记**：根据实际需要调整必填参数标记
-5. **测试配置**：生成配置后在WhiteCat Toolbox中测试确保正常工作
+5. **测试配置**：生成配置后在White Cat Toolbox中测试确保正常工作
 
 ### 🎯 最佳实践
 
@@ -490,9 +490,9 @@ Target:
 
 ## 🔌 适配项目
 
-### 已经支持WhiteCat Toolbox配置文件的项目
+### 已经支持White Cat Toolbox配置文件的项目
 
-以下项目已经官方支持WhiteCat Toolbox配置文件，可以直接使用：
+以下项目已经官方支持White Cat Toolbox配置文件，可以直接使用：
 
 | 项目名称 | 描述 | GitHub | 配置状态 |
 |---------|------|--------|---------|
@@ -502,11 +502,11 @@ Target:
 
 ### 加入支持列表
 
-如果您的项目已经支持WhiteCat Toolbox配置文件，欢迎提交PR将其添加到此列表中！
+如果您的项目已经支持White Cat Toolbox配置文件，欢迎提交PR将其添加到此列表中！
 
 提交要求：
 1. 在项目根目录包含 `wct_config.txt` 文件
-2. 配置文件遵循WhiteCat Toolbox规范
+2. 配置文件遵循White Cat Toolbox规范
 3. 提供简要的项目描述和GitHub链接
 
 ---
@@ -517,15 +517,10 @@ Target:
 
 ```json
 {
-    "ui_settings": {
-        "scale_factor": 1.25,      // 界面缩放比例
-        "theme": "default",         // 主题设置
-        "language": "zh_CN"         // 界面语言
-    },
-    "system_settings": {
-        "enable_isatty_fix": true,  // 启用isatty修复
-        "isatty_fix_mode": "auto"   // 修复模式
-    }
+  "ui_settings": {
+    "font_scale": 1.0,			// 字体缩放比例
+    "theme": "blue_white"		// UI主题
+  }
 }
 ```
 
@@ -535,7 +530,7 @@ Target:
 tools/
 ├── XXX/
 │   ├── XXX.py          # 工具主程序
-│   ├── wct_config.txt     # WhiteCat Toolbox配置文件
+│   ├── wct_config.txt     # White Cat Toolbox配置文件
 │   └── ...                # 其他工具文件
 ├── XXXXX/
 │   ├── XXXXX.exe
@@ -553,22 +548,6 @@ tools/
 WhiteCatToolbox/
 ├── main.py                 # 程序入口
 ├── wct_modules/           # 核心模块
-│   ├── languages/            # 语言文件
-│   ├── main_window.py     # 主窗口
-│   ├── tool_operation.py  # 工具操作界面
-│   ├── process.py         # 进程管理
-│   ├── parameters.py      # 参数管理
-│   ├── env_manager.py     # 环境管理
-│   ├── log_manager.py	   # 日志管理
-│   ├── config.py          # 配置解析
-│   ├── templates.py       # 模板系统
-│   ├── promotion.py       # 推广页面
-│   ├── update_checker.py  # 更新检查
-│   ├── i18n.py           # 国际化
-│   ├── theme.py          # 主题定义
-│   ├── styles.py         # 样式表
-│   ├── widgets.py        # 自定义控件
-│   └── utils.py          # 工具函数
 ├── tools/                 # 工具目录
 ├── config/               # 配置文件
 ├── promotion/            # 推广内容
@@ -580,7 +559,8 @@ WhiteCatToolbox/
 
 ### 短期计划
 - [ ] 🤖 **AI提示词** - 增加多级参数规则能力
-- [ ] 🌐 **远程管理** - 支持远程执行和监控
+- [ ] 🌐 **多语言支持** - 中文/英文
+- [ ] 🔗 **日志功能** - 完善的工具运行日志系统
 
 ### 中期计划
 - [ ] 🔗 **工作流引擎** - 支持多工具串联执行
@@ -594,7 +574,7 @@ WhiteCatToolbox/
 
 ### 用户需求征集
 我们非常重视用户的意见和建议！如果您有任何功能需求或改进建议，请通过以下方式告诉我们：
-- 在GitHub上提交Issue
+- 在GitHub/Gitcode上提交Issue
 - 加入我们的用户交流群
 
 ---
@@ -659,49 +639,9 @@ WhiteCatToolbox/
 
 ## 📝 更新日志
 
-### v0.0.6 （2025-07-15）
+### v0.1.0
 
-🎉 **重大更新**
-
-- 优化终端搜索功能，减少资源消耗
-- 增加终端日志保存功能
-- 修改Python解释器逻辑，采用扫描+手动选择的方式指定，可快速修改
-
-### v0.0.5 （2025-07-15)
-
-🎉 **重大更新**
-
-- ✨ 全新的UI界面设计，支持6级界面缩放
-- 🌍 新增多语言支持（中文/英文）
-- 🔧 重构参数管理系统，支持拖拽排序
-- 🐍 新增Python环境隔离管理功能
-- 📋 新增参数模板系统
-- 🔄 优化更新检查机制，支持SHA校验
-
-### v0.0.4 (2025-07-09)
-
-🔧 **功能改进**
-
-- 🎨 优化界面响应速度
-- 🔍 新增智能搜索功能，支持正则表达式
-- 📊 改进进程监控，支持彩色输出
-- 🛠️ 修复已知Bug若干
-
-### v0.0.3 (2025-07-07)
-
-📦 **基础功能**
-
-- ✅ 实现基本的工具管理功能
-- 📝 支持参数配置和保存
-- 🖥️ 实现多进程标签页
-- 🔧 基础的配置文件解析
-
-### v0.0.2 (2025-07-04)
-
-🚀 **初始版本**
-
-- 🎯 项目框架搭建
-- 📋 基本UI界面实现
+初版发布
 
 ------
 

@@ -13,7 +13,7 @@ from .tool_operation import ToolOperationWidget
 from .terminal_area import TerminalArea
 from .tool_scanner import ToolScanner
 from .config import ConfigManager
-from .utils import get_system_font
+from .utils import get_system_font, get_project_root
 
 from .search_system import SearchWidget, AdvancedSearchDialog
 from .virtual_env import VirtualEnvWidget
@@ -78,6 +78,11 @@ class MainWindow(QMainWindow):
     def init_ui(self):
         self.setWindowTitle("White Cat Toolbox")
         self.setMinimumSize(1200, 800)
+        
+        # Set window icon using favicon.ico
+        favicon_path = get_project_root() / "favicon.ico"
+        if favicon_path.exists():
+            self.setWindowIcon(QIcon(str(favicon_path)))
         self.resize(1600, 1000)
         
         central_widget = QWidget()

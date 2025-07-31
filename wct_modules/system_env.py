@@ -11,8 +11,15 @@ import os
 import sys
 import json
 import subprocess
-import winreg
+import platform
 from pathlib import Path
+
+# Windows-specific imports
+if platform.system() == "Windows":
+    try:
+        import winreg
+    except ImportError:
+        winreg = None
 from typing import List, Dict, Any, Optional, Tuple
 from dataclasses import dataclass, asdict
 from datetime import datetime
@@ -28,14 +35,27 @@ class EnvVariable:
     
 class SystemEnvManager:
     def __init__(self):
-        self.user_env_key = r"Environment"
-        self.system_env_key = r"SYSTEM\CurrentControlSet\Control\Session Manager\Environment"
+        self.is_windows = platform.system() == "Windows"
+        if self.is_windows and winreg:
+            self.user_env_key = r"Environment"
+            self.system_env_key = r"SYSTEM\CurrentControlSet\Control\Session Manager\Environment"
         
     def get_environment_variables(self) -> Dict[str, EnvVariable]:
         """获取所有环境变量"""
         variables = {}
         
-
+        # On non-Windows systems, use os.environ directly
+        if not self.is_windows or not winreg:
+            for name, value in os.environ.items():
+                variables[name] = EnvVariable(
+                    name=name,
+                    value=value,
+                    scope='system',
+                    original_value=value
+                )
+            return variables
+        
+        # Windows-specific registry access
         try:
             with winreg.OpenKey(winreg.HKEY_CURRENT_USER, self.user_env_key) as key:
                 i = 0
@@ -49,12 +69,12 @@ class SystemEnvManager:
                             original_value=value
                         )
                         i += 1
-                    except WindowsError:
+                    except (WindowsError, OSError):
                         break
         except Exception as e:
             print(f"读取用户环境变量失败: {e}")
             
-
+        # 读取系统环境变量
         try:
             with winreg.OpenKey(winreg.HKEY_LOCAL_MACHINE, self.system_env_key) as key:
                 i = 0
@@ -69,7 +89,7 @@ class SystemEnvManager:
                                 original_value=value
                             )
                         i += 1
-                    except WindowsError:
+                    except (WindowsError, OSError):
                         break
         except Exception as e:
             print(f"读取系统环境变量失败: {e}")
@@ -78,6 +98,11 @@ class SystemEnvManager:
         
     def set_environment_variable(self, name: str, value: str, scope: str = 'user') -> bool:
         """设置环境变量"""
+        if not self.is_windows or not winreg:
+            # On non-Windows systems, only set in current process
+            os.environ[name] = value
+            return True
+            
         try:
             if scope == 'user':
                 key_path = self.user_env_key
@@ -89,7 +114,7 @@ class SystemEnvManager:
             with winreg.OpenKey(hkey, key_path, 0, winreg.KEY_SET_VALUE) as key:
                 winreg.SetValueEx(key, name, 0, winreg.REG_EXPAND_SZ, value)
                 
-
+            # 广播环境变量更改
             self.broadcast_env_change()
             return True
             
@@ -99,6 +124,12 @@ class SystemEnvManager:
             
     def delete_environment_variable(self, name: str, scope: str = 'user') -> bool:
         """删除环境变量"""
+        if not self.is_windows or not winreg:
+            # On non-Windows systems, only delete from current process
+            if name in os.environ:
+                del os.environ[name]
+            return True
+            
         try:
             if scope == 'user':
                 key_path = self.user_env_key
@@ -110,7 +141,7 @@ class SystemEnvManager:
             with winreg.OpenKey(hkey, key_path, 0, winreg.KEY_SET_VALUE) as key:
                 winreg.DeleteValue(key, name)
                 
-
+            # 广播环境变量更改
             self.broadcast_env_change()
             return True
             
@@ -120,6 +151,10 @@ class SystemEnvManager:
             
     def broadcast_env_change(self):
         """通知系统环境变量已更改"""
+        if not self.is_windows:
+            # Non-Windows systems don't need broadcast notification
+            return
+            
         try:
             import ctypes
             from ctypes import wintypes

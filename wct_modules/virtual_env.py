@@ -16,7 +16,6 @@ from pathlib import Path
 from typing import List, Dict, Any, Optional
 from dataclasses import dataclass, asdict
 from datetime import datetime
-from .utils import get_project_root
 
 @dataclass
 class VirtualEnvInfo:
@@ -36,10 +35,10 @@ class VirtualEnvInfo:
 class VirtualEnvManager:
     def __init__(self, base_dir: str = None):
         if base_dir is None:
-            # 修复PyInstaller路径问题
-            project_root = get_project_root()
-            base_dir = project_root / "config" / "venvs"
-        self.base_dir = str(base_dir)
+
+            app_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+            base_dir = os.path.join(app_dir, "config", "venvs")
+        self.base_dir = base_dir
         self.config_file = os.path.join(self.base_dir, "venvs.json")
         self.ensure_base_dir()
         

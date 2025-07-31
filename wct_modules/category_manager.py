@@ -46,26 +46,6 @@ class CategoryManager:
     def create_default_categories(self):
         """创建默认分类"""
         self.custom_categories = {
-            'web安全': {
-                'display_name': 'Web安全',
-                'description': 'Web应用安全测试工具',
-                'icon': '🌐'
-            },
-            '网络扫描': {
-                'display_name': '网络扫描',
-                'description': '网络发现和端口扫描工具',
-                'icon': '🔍'
-            },
-            'SQL注入': {
-                'display_name': 'SQL注入',
-                'description': 'SQL注入检测和利用工具',
-                'icon': '💉'
-            },
-            '信息收集': {
-                'display_name': '信息收集',
-                'description': '目标信息收集和侦察工具',
-                'icon': '📊'
-            },
             '未分类': {
                 'display_name': '未分类',
                 'description': '未归类的工具',

@@ -57,11 +57,11 @@ class ProcessManager(QObject):
         try:
             import winpty
             
-            # 尝试使用 pywinpty
+
             if not command_parts or not isinstance(command_parts, list):
                 raise ValueError("Invalid command_parts")
                 
-            # 构建命令字符串
+
             command_str = ' '.join(f'"{part}"' if ' ' in str(part) else str(part) for part in command_parts)
             
             pty_process = winpty.PtyProcess.spawn(
@@ -132,8 +132,12 @@ class ProcessManager(QObject):
         return process
         
     def _create_unix_pty_process(self, command_parts, working_dir):
-        import pty
-        import select
+        try:
+            import pty
+            import select
+        except ImportError:
+            # Fallback if pty/select are not available
+            return self._create_fallback_process(command_parts, working_dir)
         
         master_fd, slave_fd = pty.openpty()
         
@@ -148,7 +152,7 @@ class ProcessManager(QObject):
             stdin=slave_fd,
             stdout=slave_fd,
             stderr=slave_fd,
-            preexec_fn=os.setsid
+            preexec_fn=os.setsid if not is_windows() else None
         )
         
         os.close(slave_fd)
@@ -166,13 +170,19 @@ class ProcessManager(QObject):
                 
             def terminate(self):
                 try:
-                    os.killpg(os.getpgid(self.process.pid), signal.SIGTERM)
+                    if not is_windows():
+                        os.killpg(os.getpgid(self.process.pid), signal.SIGTERM)
+                    else:
+                        self.process.terminate()
                 except Exception:
                     self.process.terminate()
                     
             def kill(self):
                 try:
-                    os.killpg(os.getpgid(self.process.pid), signal.SIGKILL)
+                    if not is_windows():
+                        os.killpg(os.getpgid(self.process.pid), signal.SIGKILL)
+                    else:
+                        self.process.kill()
                 except Exception:
                     self.process.kill()
                     
@@ -181,10 +191,16 @@ class ProcessManager(QObject):
                 
             def read_output(self, size=1024):
                 try:
+                    # Import select locally to handle ImportError
+                    import select
                     if select.select([self.master_fd], [], [], 0)[0]:
                         return os.read(self.master_fd, size).decode('utf-8', errors='ignore')
-                except Exception:
-                    pass
+                except (ImportError, Exception):
+                    # Fallback for systems without select or other errors
+                    try:
+                        return os.read(self.master_fd, size).decode('utf-8', errors='ignore')
+                    except Exception:
+                        pass
                 return ''
                 
         return PtyProcess(process, master_fd)
@@ -244,8 +260,15 @@ class ProcessManager(QObject):
                         else:
 
                             if hasattr(self.stdout, 'fileno'):
-                                ready, _, _ = select.select([self.stdout.fileno()], [], [], 0)
-                                if ready:
+                                try:
+                                    import select
+                                    ready, _, _ = select.select([self.stdout.fileno()], [], [], 0)
+                                    if ready:
+                                        stdout_data = self.stdout.read(size)
+                                        if stdout_data:
+                                            output += stdout_data
+                                except ImportError:
+                                    # Fallback without select
                                     stdout_data = self.stdout.read(size)
                                     if stdout_data:
                                         output += stdout_data
@@ -292,15 +315,23 @@ class ProcessManager(QObject):
                         except Exception as e:
 
                             try:
-                                import select
-                                if hasattr(process, 'fileno'):
-                                    ready, _, _ = select.select([process.fileno()], [], [], 0)
-                                    if ready:
-                                        output = process.read(1024)
-                                        if output:
-                                            if isinstance(output, bytes):
-                                                output = output.decode('utf-8', errors='ignore')
-                                            has_output = True
+                                try:
+                                    import select
+                                    if hasattr(process, 'fileno'):
+                                        ready, _, _ = select.select([process.fileno()], [], [], 0)
+                                        if ready:
+                                            output = process.read(1024)
+                                            if output:
+                                                if isinstance(output, bytes):
+                                                    output = output.decode('utf-8', errors='ignore')
+                                                has_output = True
+                                except ImportError:
+                                    # Fallback without select
+                                    output = process.read(1024)
+                                    if output:
+                                        if isinstance(output, bytes):
+                                            output = output.decode('utf-8', errors='ignore')
+                                        has_output = True
                             except Exception:
                                 pass
                     elif hasattr(process, 'read_combined_output'):
