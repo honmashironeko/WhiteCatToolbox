@@ -2,10 +2,12 @@ import os
 import json
 from pathlib import Path
 from typing import Dict, List, Tuple, Any
+from .utils import get_project_root
 
 class ConfigManager:
     def __init__(self):
-        self.project_root = Path(__file__).parent.parent
+        # 修复PyInstaller路径问题
+        self.project_root = get_project_root()
         self.tools_dir = self.project_root / "tools"
         self.config_dir = self.project_root / "config"
         self.app_config_path = self.config_dir / "app_config.json"

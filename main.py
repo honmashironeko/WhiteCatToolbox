@@ -6,7 +6,8 @@ from PySide6.QtCore import Qt
 from PySide6.QtGui import QIcon
 
 def setup_environment():
-    project_root = Path(__file__).parent
+    from wct_modules.utils import get_project_root
+    project_root = get_project_root()
     sys.path.insert(0, str(project_root))
     
     if hasattr(Qt, 'AA_EnableHighDpiScaling'):
@@ -21,7 +22,9 @@ def main():
     app.setStyle('Fusion')
     
     # 设置应用程序图标
-    icon_path = Path(__file__).parent / "favicon.ico"
+    from wct_modules.utils import get_project_root
+    project_root = get_project_root()
+    icon_path = project_root / "favicon.ico"
     if icon_path.exists():
         app.setWindowIcon(QIcon(str(icon_path)))
     

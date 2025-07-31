@@ -2,7 +2,7 @@ import os
 import json
 from pathlib import Path
 from typing import Dict, List, Optional, Any
-from .utils import normalize_path, get_system_font
+from .utils import normalize_path, get_system_font, get_project_root
 
 class ToolInfo:
     def __init__(self, name: str, path: str, config_data: Dict[str, Any]):
@@ -125,7 +125,9 @@ class ToolScanner:
             return self.tools
         
 
-        app_config_file = self.tools_directory.parent / 'config' / 'app_config.json'
+        # 修复PyInstaller路径问题
+        project_root = get_project_root()
+        app_config_file = project_root / 'config' / 'app_config.json'
         tool_commands = {}
         if app_config_file.exists():
             try:
