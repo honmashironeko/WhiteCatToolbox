@@ -1,85 +1,136 @@
 import os
-from .i18n import t
+import json
+from pathlib import Path
+from typing import Dict, List, Tuple, Any
 
-class ToolConfigParser:
-    @staticmethod
-    def parse_config(config_path):
-        config = {
-            '常用参数': {
-                '勾选项区': [],
-                '输入框区': []
+class ConfigManager:
+    def __init__(self):
+        self.project_root = Path(__file__).parent.parent
+        self.tools_dir = self.project_root / "tools"
+        self.config_dir = self.project_root / "config"
+        self.app_config_path = self.config_dir / "app_config.json"
+        
+        self.ensure_directories()
+        self.load_app_config()
+        
+    def ensure_directories(self):
+        self.tools_dir.mkdir(exist_ok=True)
+        self.config_dir.mkdir(exist_ok=True)
+        
+    def load_app_config(self):
+        default_config = {
+            "ui_settings": {
+                "scale_factor": 1.0,
+                "theme": "blue_white",
+                "language": "zh_CN",
+                "font_scale": 1.0
             },
-            '全部参数': {
-                '勾选项区': [],
-                '输入框区': []
-            }
+            "tool_command": {}
         }
         
-        if not os.path.exists(config_path):
-            return config
+        if self.app_config_path.exists():
+            try:
+                with open(self.app_config_path, 'r', encoding='utf-8') as f:
+                    self.app_config = json.load(f)
+            except Exception:
+                self.app_config = default_config
+        else:
+            self.app_config = default_config
+            self.save_app_config()
+            
+    def save_app_config(self):
+        try:
+            with open(self.app_config_path, 'w', encoding='utf-8') as f:
+                json.dump(self.app_config, f, indent=2, ensure_ascii=False)
+        except Exception as e:
+            print(f"保存配置失败: {e}")
+            
+    def scan_tools(self) -> Dict[str, Dict[str, Any]]:
+        tools = {}
         
+        if not self.tools_dir.exists():
+            return tools
+            
+        for item in self.tools_dir.iterdir():
+            if item.is_dir():
+                config_file = item / "wct_config.txt"
+                if config_file.exists():
+                    tool_config = self.parse_tool_config(config_file)
+                    if tool_config:
+                        tools[item.name] = {
+                            'display_name': item.name,
+                            'path': str(item),
+                            'config': tool_config
+                        }
+                        
+        return tools
+        
+    def get_tool_config(self, tool_name: str) -> Dict[str, Any]:
+        tool_path = self.tools_dir / tool_name
+        config_file = tool_path / "wct_config.txt"
+        
+        if config_file.exists():
+            return self.parse_tool_config(config_file)
+        return {}
+        
+    def parse_tool_config(self, config_path: Path) -> Dict[str, Any]:
         try:
             with open(config_path, 'r', encoding='utf-8') as f:
-                lines = f.readlines()
-            
-            current_section = None
-            current_subsection = None
-            
-            for line in lines:
-                line = line.strip()
-                if not line:
-                    continue
-                
-                if line.startswith('%') and not line.startswith('%%'):
-                    section_name = line[1:]
-                    if section_name in ['常用参数', 'Common Parameters']:
-                        current_section = '常用参数'
-                    elif section_name in ['全部参数', 'All Parameters']:
-                        current_section = '全部参数'
-                    else:
-                        current_section = section_name
-                elif line.startswith('%%'):
-                    subsection_name = line[2:]
-                    if subsection_name in ['勾选项', 'CheckBoxes']:
-                        current_subsection = '勾选项区'
-                    elif subsection_name in ['输入项', 'Inputs']:
-                        current_subsection = '输入框区'
-                    else:
-                        current_subsection = None
-                elif '=' in line and current_section and current_subsection:
-                    try:
-                        parts = line.split('=')
-                        if len(parts) >= 3:
-                            param_name = parts[0].strip()
-                            display_name = parts[1].strip()
-                            last_part = parts[-1].strip()
-                            if last_part in ['0', '1'] and len(parts) >= 4:
-                                required = last_part
-                                description = '='.join(parts[2:-1]).strip()
-                            else:
-                                description = '='.join(parts[2:]).strip()
-                                required = '0'
-                            if current_subsection == '勾选项区':
-                                param_type = '1'
-                            elif current_subsection == '输入框区':
-                                param_type = '2'
-                            else:
-                                continue
-                            param_info = {
-                                'param_name': param_name,
-                                'display_name': display_name,
-                                'description': description,
-                                'type': param_type,
-                                'required': required == '1',
-                                'default': '',
-                                'help': description
-                            }
-                            if current_section in config and current_subsection in config[current_section]:
-                                config[current_section][current_subsection].append(param_info)
-                    except Exception as e:
-                        print(t("config_parse_line_error").format(line=line.strip(), e=e))
-                        continue
+                content = f.read()
+            return self._parse_config_content(content)
         except Exception as e:
-            print(t("config_parse_error").format(e=e))
+            print(f"解析配置文件失败 {config_path}: {e}")
+            return {}
+            
+    def _parse_config_content(self, content: str) -> Dict[str, Any]:
+        config = {
+            'common_params': {'checkboxes': [], 'inputs': []},
+            'all_params': {'checkboxes': [], 'inputs': []}
+        }
         
+        lines = [line.strip() for line in content.split('\n') if line.strip()]
+        current_section = None
+        current_type = None
+        
+        for line in lines:
+            if line.startswith('%常用参数'):
+                current_section = 'common_params'
+                continue
+            elif line.startswith('%全部参数'):
+                current_section = 'all_params'
+                continue
+            elif line.startswith('%%勾选项'):
+                current_type = 'checkboxes'
+                continue
+            elif line.startswith('%%输入项'):
+                current_type = 'inputs'
+                continue
+            elif line.startswith('%') or line.startswith('%%'):
+                continue
+                
+            if current_section and current_type and '=' in line:
+                param_info = self._parse_param_line(line)
+                if param_info:
+                    config[current_section][current_type].append(param_info)
+                    
         return config
+        
+    def _parse_param_line(self, line: str) -> Dict[str, str]:
+        parts = line.split('=')
+        if len(parts) >= 4:
+            return {
+                'param': parts[0].strip(),
+                'display_name': parts[1].strip(),
+                'description': parts[2].strip(),
+                'required': parts[3].strip() == '1'
+            }
+        return None
+        
+    def get_tool_command(self, tool_name: str) -> str:
+        return self.app_config.get('tool_command', {}).get(tool_name, '')
+        
+    def set_tool_command(self, tool_name: str, command: str):
+        if 'tool_command' not in self.app_config:
+            self.app_config['tool_command'] = {}
+        self.app_config['tool_command'][tool_name] = command
+        self.save_app_config()

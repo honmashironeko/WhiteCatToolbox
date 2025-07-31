@@ -1,43 +1,50 @@
-#!/usr/bin/env python3
-if __name__ == "__main__":
-    import sys
-    import os
-    from wct_modules import utils
-    utils.load_scale_factor()
-    from PySide6.QtWidgets import QApplication
-    from PySide6.QtGui import QIcon
+import sys
+import os
+from pathlib import Path
+from PySide6.QtWidgets import QApplication
+from PySide6.QtCore import Qt
+from PySide6.QtGui import QIcon
 
-    _workspace_root = os.path.abspath(os.path.dirname(__file__))
-    _existing_pythonpath = os.environ.get("PYTHONPATH", "")
-    if _workspace_root not in _existing_pythonpath.split(os.pathsep):
-        os.environ["PYTHONPATH"] = (
-            _workspace_root + (os.pathsep + _existing_pythonpath if _existing_pythonpath else "")
-        )
-    try:
-        import importlib
-        importlib.import_module("sitecustomize")
-    except Exception:
-        pass
+def setup_environment():
+    project_root = Path(__file__).parent
+    sys.path.insert(0, str(project_root))
     
-    try:
-        from wct_modules.isatty_fix import apply_isatty_fix
-        apply_isatty_fix()
-    except Exception:
-        pass
+    if hasattr(Qt, 'AA_EnableHighDpiScaling'):
+        QApplication.setAttribute(Qt.AA_EnableHighDpiScaling, True)
+    if hasattr(Qt, 'AA_UseHighDpiPixmaps'):
+        QApplication.setAttribute(Qt.AA_UseHighDpiPixmaps, True)
 
-    from wct_modules.styles import get_cross_platform_app_stylesheet
-    from wct_modules.main_window import MainWindow
-
+def main():
+    setup_environment()
+    
     app = QApplication(sys.argv)
     app.setStyle('Fusion')
+    
+    # 设置应用程序图标
+    icon_path = Path(__file__).parent / "favicon.ico"
+    if icon_path.exists():
+        app.setWindowIcon(QIcon(str(icon_path)))
+    
+    from wct_modules.main_window import MainWindow
+    from wct_modules.config import ConfigManager
+    from wct_modules.font_scale_widget import GlobalFontScaleManager
+    
 
-    icon_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "favicon.ico")
-    if os.path.exists(icon_path):
-        app.setWindowIcon(QIcon(icon_path))
+    config_manager = ConfigManager()
+    
 
-    app.setStyleSheet(get_cross_platform_app_stylesheet())
-
+    font_scale_manager = GlobalFontScaleManager(config_manager)
+    font_scale_manager.initialize()
+    
     window = MainWindow()
+    
+    # 为主窗口设置图标
+    if icon_path.exists():
+        window.setWindowIcon(QIcon(str(icon_path)))
+    
     window.show()
+    
+    sys.exit(app.exec())
 
-    sys.exit(app.exec()) 
+if __name__ == '__main__':
+    main()

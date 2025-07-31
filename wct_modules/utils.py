@@ -1,197 +1,160 @@
-import os
 import sys
+import os
 import platform
-import json
-import shlex
-import subprocess
 from pathlib import Path
-from .i18n import t
+from PySide6.QtGui import QFont
+from PySide6.QtCore import QStandardPaths
 
 def get_system_font():
-    
     system = platform.system()
     if system == "Windows":
-        return "Microsoft YaHei"
-    elif system == "Darwin":  
-        return "PingFang SC"
-    else:  
-        return "DejaVu Sans"
+        return QFont("Microsoft YaHei", 9)
+    elif system == "Darwin":
+        return QFont("PingFang SC", 12)
+    else:
+        return QFont("Noto Sans CJK SC", 9)
 
-def get_monospace_font():
-    
-    system = platform.system()
-    if system == "Windows":
-        return "Consolas"
-    elif system == "Darwin":  
-        return "Monaco"
-    else:  
-        return "DejaVu Sans Mono"
+def normalize_path(path):
+    return str(Path(path).resolve())
 
-def get_system_font_css():
-    
-    system_font = get_system_font()
-    return f"font-family: '{system_font}', Arial, sans-serif;"
+def get_executable_path():
+    if getattr(sys, 'frozen', False):
+        return Path(sys.executable).parent
+    else:
+        return Path(__file__).parent.parent
 
-def get_monospace_font_css():
-    
-    mono_font = get_monospace_font()
-    return f"font-family: '{mono_font}', 'Consolas', 'Monaco', 'Courier New', monospace;"
+def get_project_root():
+    if getattr(sys, 'frozen', False):
+        return Path(sys.executable).parent
+    else:
+        return Path(__file__).parent.parent
 
-def normalize_path_separators(path, system):
-    if not path or not isinstance(path, str):
-        return path
-
-    if ('/' in path or '\\' in path) and not path.startswith(('http://', 'https://', 'ftp://')):
-        if system == "Windows":
-
-            return path.replace('/', '\\')
-        else:
-
-            return path.replace('\\', '/')
-    
+def ensure_directory(path):
+    Path(path).mkdir(parents=True, exist_ok=True)
     return path
 
-def build_cross_platform_command(tool_path, user_command, params):
-    
-    system = platform.system()
+def get_temp_dir():
+    temp_dir = QStandardPaths.writableLocation(QStandardPaths.TempLocation)
+    return Path(temp_dir) / "white_cat_toolbox"
 
-    BACKSLASH_PLACEHOLDER = "<<BACKSLASH>>"
-    if system == "Windows":
-        user_command_safe = user_command.replace('\\', BACKSLASH_PLACEHOLDER)
+def is_windows():
+    return platform.system() == "Windows"
+
+def is_macos():
+    return platform.system() == "Darwin"
+
+def is_linux():
+    return platform.system() == "Linux"
+
+def get_shell_command():
+    if is_windows():
+        return "cmd.exe"
     else:
-        user_command_safe = user_command
+        return "/bin/bash"
+
+def build_command(tool_path, tool_command, parameters):
+    command_parts = []
     
+    if tool_command:
+        if is_windows() and tool_command.endswith('.py'):
+            command_parts.extend(["python", tool_command])
+        else:
+            command_parts.append(tool_command)
+    else:
+        command_parts.append(str(tool_path))
+    
+    for param_name, value in parameters.items():
+        if isinstance(value, bool) and value:
+            command_parts.append(param_name)
+        elif isinstance(value, str) and value.strip():
+            if ' ' in value:
+                command_parts.extend([param_name, f'"{value}"'])
+            else:
+                command_parts.extend([param_name, value])
+    
+    return command_parts
+
+def format_file_size(size_bytes):
+    if size_bytes == 0:
+        return "0 B"
+    
+    size_names = ["B", "KB", "MB", "GB", "TB"]
+    import math
+    i = int(math.floor(math.log(size_bytes, 1024)))
+    p = math.pow(1024, i)
+    s = round(size_bytes / p, 2)
+    return f"{s} {size_names[i]}"
+
+def clean_ansi_codes(text):
+    """移除文本中的所有ANSI转义序列"""
+    import re
+
+    ansi_escape = re.compile(r'(?:'
+                            r'\x1b\[[0-?]*[ -/]*[@-~]|'
+                            r'\x1b\][^\x07\x1b]*(?:\x07|\x1b\\)|'
+                            r'\x1b[@-Z\\-_]'
+                            r')')
+    return ansi_escape.sub('', text)
+
+def clean_html_tags(text):
+    import re
+    clean = re.compile('<.*?>')
+    return re.sub(clean, '', text)
+
+def get_available_fonts():
+    from PySide6.QtGui import QFontDatabase
+    font_db = QFontDatabase()
+    return font_db.families()
+
+def scale_size(size, scale_factor=1.0):
+    return int(size * scale_factor)
+
+def get_config_dir():
+    config_dir = QStandardPaths.writableLocation(QStandardPaths.AppConfigLocation)
+    return ensure_directory(Path(config_dir) / "white_cat_toolbox")
+
+def get_app_data_dir():
+    """获取应用数据目录"""
+    app_data_dir = QStandardPaths.writableLocation(QStandardPaths.AppDataLocation)
+    return ensure_directory(Path(app_data_dir) / "white_cat_toolbox")
+
+def get_cache_dir():
+    cache_dir = QStandardPaths.writableLocation(QStandardPaths.CacheLocation)
+    return ensure_directory(Path(cache_dir) / "white_cat_toolbox")
+
+def validate_python_path(python_path):
     try:
-        command_parts = shlex.split(user_command_safe)
-    except ValueError:
-        command_parts = user_command_safe.split()
-
-    if system == "Windows":
-        command_parts = [part.replace(BACKSLASH_PLACEHOLDER, '\\') for part in command_parts]
-    
-    if len(command_parts) >= 2 and command_parts[0] in ["python", "python3", "python.exe"]:
-        script_name = command_parts[1]
-
-        if os.path.isabs(script_name):
-
-            full_script_path = script_name
-        else:
-
-            full_script_path = script_name
-
-        full_script_path = normalize_path_separators(full_script_path, system)
-
-        processed_args = []
-        for arg in command_parts[2:]:
-            processed_args.append(normalize_path_separators(arg, system))
-        
-        command = [command_parts[0], full_script_path] + processed_args
-        
-        if params:
-
-            normalized_params = [normalize_path_separators(p, system) for p in params]
-            command.extend(normalized_params)
-        
-        return command
-        
-    elif len(command_parts) >= 1:
-        exe_name = command_parts[0]
-
-        if os.path.isabs(exe_name):
-
-            full_exe_path = exe_name
-        else:
-
-            full_exe_path = exe_name
-
-        full_exe_path = normalize_path_separators(full_exe_path, system)
-
-        processed_args = []
-        for arg in command_parts[1:]:
-            processed_args.append(normalize_path_separators(arg, system))
-        
-        command = [full_exe_path] + processed_args
-        
-        if params:
-
-            normalized_params = [normalize_path_separators(p, system) for p in params]
-            command.extend(normalized_params)
-        
-        return command
-    else:
-        raise ValueError(t("unable_to_parse_command"))
-
-def setup_workspace_path():
-    
-    _workspace_root = os.path.abspath(os.path.dirname(__file__))
-    _existing_pythonpath = os.environ.get("PYTHONPATH", "")
-    if _workspace_root not in _existing_pythonpath.split(os.pathsep):
-        os.environ["PYTHONPATH"] = (
-            _workspace_root + (os.pathsep + _existing_pythonpath if _existing_pythonpath else "")
+        import subprocess
+        result = subprocess.run(
+            [python_path, "--version"], 
+            capture_output=True, 
+            text=True, 
+            timeout=5
         )
+        return result.returncode == 0
+    except Exception:
+        return False
+
+def get_python_version(python_path):
     try:
-        import importlib
-        importlib.import_module("sitecustomize")
+        import subprocess
+        result = subprocess.run(
+            [python_path, "--version"], 
+            capture_output=True, 
+            text=True, 
+            timeout=5
+        )
+        if result.returncode == 0:
+            return result.stdout.strip()
     except Exception:
         pass
+    return "Unknown"
 
-SCALE_FACTOR = 1.0
-
-def load_scale_factor():
-    
-    global SCALE_FACTOR
-    try:
-        if os.path.exists("config/app_config.json"):
-            with open("config/app_config.json", "r") as f:
-                config = json.load(f)
-                ui_settings = config.get("ui_settings", {})
-                factor = ui_settings.get("scale_factor", 1.0)
-        else:
-            factor = 1.0
-            
-        if isinstance(factor, (int, float)) and factor > 0:
-            SCALE_FACTOR = float(factor)
-        else:
-            SCALE_FACTOR = 1.0
-    except (FileNotFoundError, json.JSONDecodeError):
-        SCALE_FACTOR = 1.0
-    return SCALE_FACTOR
-
-def save_scale_factor(factor):
-    
-    global SCALE_FACTOR
-    if isinstance(factor, (int, float)) and factor > 0:
-        SCALE_FACTOR = float(factor)
-        config = {}
-        if os.path.exists("config/app_config.json"):
-            try:
-                with open("config/app_config.json", "r") as f:
-                    config = json.load(f)
-            except:
-                config = {}
-        if "ui_settings" not in config:
-            config["ui_settings"] = {}
-        config["ui_settings"]["scale_factor"] = SCALE_FACTOR
-        os.makedirs("config", exist_ok=True)
-        with open("config/app_config.json", "w") as f:
-            json.dump(config, f, indent=4, ensure_ascii=False)
-
-def s(value):
-    
-    return int(value * SCALE_FACTOR)
-
-load_scale_factor() 
-
-def get_optimized_subprocess_kwargs():
-    
-    kwargs = {}
-    
-    if platform.system() == "Windows":
-
+def create_startup_info():
+    if is_windows():
+        import subprocess
         startupinfo = subprocess.STARTUPINFO()
         startupinfo.dwFlags |= subprocess.STARTF_USESHOWWINDOW
         startupinfo.wShowWindow = subprocess.SW_HIDE
-        kwargs['startupinfo'] = startupinfo
-        kwargs['creationflags'] = subprocess.CREATE_NO_WINDOW
-    
-    return kwargs 
+        return startupinfo
+    return None

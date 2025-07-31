@@ -1,811 +1,518 @@
+
+"""
+White Cat Toolbox - 自动更新检查器
+实现多镜像站点支持、智能容错和版本比较功能
+"""
+
 import json
 import re
-import os
-import shutil
-import tempfile
-import zipfile
-from PySide6.QtCore import QThread, QObject, Signal, QTimer
-from PySide6.QtWidgets import QMessageBox, QDialog, QVBoxLayout, QHBoxLayout, QLabel, QPushButton, QTextEdit
-from PySide6.QtGui import QFont, QDesktopServices
-from PySide6.QtCore import QUrl
-from .i18n import t
-from .theme import colors, params
-from .utils import get_system_font, s
+import ssl
+import time
+from datetime import datetime, timedelta
+from pathlib import Path
+from typing import Dict, List, Optional, Tuple
+from urllib.parse import urljoin
+
+from PySide6.QtCore import QObject, QThread, Signal, QTimer
+from PySide6.QtWidgets import (
+    QDialog, QVBoxLayout, QHBoxLayout, QLabel, QPushButton,
+    QProgressBar, QTextEdit, QCheckBox, QComboBox, QMessageBox
+)
+from PySide6.QtGui import QFont
 
 try:
     import requests
-
-    try:
-        from urllib3.exceptions import InsecureRequestWarning
-        requests.packages.urllib3.disable_warnings(InsecureRequestWarning)
-    except (ImportError, AttributeError):
-
-        try:
-            from requests.packages.urllib3.exceptions import InsecureRequestWarning
-            requests.packages.urllib3.disable_warnings(InsecureRequestWarning)
-        except (ImportError, AttributeError):
-            pass
-    REQUESTS_AVAILABLE = True
+    HAS_REQUESTS = True
 except ImportError:
-    REQUESTS_AVAILABLE = False
-
-try:
     import urllib.request
     import urllib.error
-    import ssl
-    URLLIB_AVAILABLE = True
-except ImportError:
-    URLLIB_AVAILABLE = False
+    HAS_REQUESTS = False
 
-CURRENT_VERSION = "v0.0.6"
-GITHUB_MIRRORS = [
-    "https://api.github.com",
-    "https://gh-api.p3terx.com",
-]
+class VersionInfo:
+    """版本信息类"""
+    
+    def __init__(self, version_string: str):
+        self.version_string = version_string
+        self.major, self.minor, self.patch, self.pre_release = self._parse_version(version_string)
+        
+    def _parse_version(self, version: str) -> Tuple[int, int, int, str]:
+        """解析版本字符串"""
 
-FAILED_MIRRORS = set()
-RAW_GITHUB_MIRRORS = [
-    "https://raw.githubusercontent.com",
-    "https://ghproxy.com/https://raw.githubusercontent.com",
-    "https://cdn.jsdelivr.net/gh",
-    "https://raw.kgithub.com",
-    "https://ghps.cc/https://raw.githubusercontent.com",
-]
+        version = version.lstrip('v')
+        
 
-def test_mirror_availability():
-    
-    print("[调试] 开始测试镜像站点可用性...")
-    available_mirrors = []
-    
-    for mirror in GITHUB_MIRRORS:
-        try:
-            if REQUESTS_AVAILABLE:
-                headers = {'User-Agent': 'WhiteCatToolbox/1.0'}
-                response = requests.get(f"{mirror}/repos/octocat/Hello-World", 
-                                      headers=headers, timeout=10, verify=False)
-                if response.status_code == 200:
-                    available_mirrors.append(mirror)
-                    print(f"[调试] 镜像可用: {mirror}")
-                else:
-                    print(f"[调试] 镜像不可用: {mirror}, 状态码: {response.status_code}")
-                    FAILED_MIRRORS.add(mirror)
-        except Exception as e:
-            print(f"[调试] 镜像测试失败: {mirror}, 错误: {e}")
-            FAILED_MIRRORS.add(mirror)
-    
-    print(f"[调试] 可用镜像数量: {len(available_mirrors)}/{len(GITHUB_MIRRORS)}")
-    return available_mirrors
+        pattern = r'^(\d+)\.(\d+)\.(\d+)(?:[-.]?(alpha|beta|rc|dev)(\d*))?'
+        match = re.match(pattern, version, re.IGNORECASE)
+        
+        if not match:
 
-def compare_versions(version1, version2):
-    def normalize_version(v):
-        v = re.sub(r'^v', '', v)
-        v = re.sub(r'[_-](alpha|beta|rc).*$', '', v)
-        return [int(x) for x in v.split('.') if x.isdigit()]
-    
-    v1_parts = normalize_version(version1)
-    v2_parts = normalize_version(version2)
+            return 0, 0, 0, ''
+            
+        major = int(match.group(1))
+        minor = int(match.group(2))
+        patch = int(match.group(3))
+        pre_release = ''
+        
+        if match.group(4):
+            pre_release = match.group(4).lower()
+            if match.group(5):
+                pre_release += match.group(5)
+                
+        return major, minor, patch, pre_release
+        
+    def __lt__(self, other):
+        """版本比较：小于"""
+        if not isinstance(other, VersionInfo):
+            return NotImplemented
+            
 
-    max_len = max(len(v1_parts), len(v2_parts))
-    v1_parts.extend([0] * (max_len - len(v1_parts)))
-    v2_parts.extend([0] * (max_len - len(v2_parts)))
-    
-    for i in range(max_len):
-        if v1_parts[i] > v2_parts[i]:
-            return 1
-        elif v1_parts[i] < v2_parts[i]:
-            return -1
-    
-    return 0
+        if self.major != other.major:
+            return self.major < other.major
+        if self.minor != other.minor:
+            return self.minor < other.minor
+        if self.patch != other.patch:
+            return self.patch < other.patch
+            
+
+        if not self.pre_release and not other.pre_release:
+            return False
+        if not self.pre_release and other.pre_release:
+            return False
+        if self.pre_release and not other.pre_release:
+            return True
+            
+
+        pre_order = {'dev': 0, 'alpha': 1, 'beta': 2, 'rc': 3}
+        self_pre = self.pre_release.rstrip('0123456789')
+        other_pre = other.pre_release.rstrip('0123456789')
+        
+        if self_pre != other_pre:
+            return pre_order.get(self_pre, 999) < pre_order.get(other_pre, 999)
+            
+
+        self_num = re.search(r'(\d+)$', self.pre_release)
+        other_num = re.search(r'(\d+)$', other.pre_release)
+        
+        if self_num and other_num:
+            return int(self_num.group(1)) < int(other_num.group(1))
+        elif self_num:
+            return False
+        elif other_num:
+            return True
+            
+        return False
+        
+    def __eq__(self, other):
+        """版本比较：等于"""
+        if not isinstance(other, VersionInfo):
+            return NotImplemented
+        return (self.major, self.minor, self.patch, self.pre_release) == \
+               (other.major, other.minor, other.patch, other.pre_release)
+               
+    def __str__(self):
+        return self.version_string
 
 class UpdateChecker(QThread):
-    update_found = Signal(dict)
-    check_completed = Signal(bool, str)
+    """更新检查器线程"""
     
-    def __init__(self):
-        super().__init__()
-        self.repo_path = "repos/honmashironeko/WhiteCatToolbox/releases/latest"
+
+    update_available = Signal(dict)
+    no_update = Signal()
+    check_failed = Signal(str)
+    progress_updated = Signal(str)
+    
+    def __init__(self, current_version: str, parent=None):
+        super().__init__(parent)
+        self.current_version = VersionInfo(current_version)
+        self.timeout = 10
+        self.max_retries = 3
         
-    def _get_repo_url(self, mirror):
+
+        self.mirror_sites = [
+            {
+                'name': 'GitHub Releases',
+                'url': 'https://api.github.com/repos/whitecatx/wct/releases/latest',
+                'parser': self._parse_github_response
+            },
+            {
+                'name': 'GitLab Releases',
+                'url': 'https://gitlab.com/api/v4/projects/whitecatx%2Fwct/releases',
+                'parser': self._parse_gitlab_response
+            },
+            {
+                'name': 'Gitee Releases',
+                'url': 'https://gitee.com/api/v5/repos/whitecatx/wct/releases/latest',
+                'parser': self._parse_gitee_response
+            }
+        ]
         
-        if "gitclone.com" in mirror:
 
-            return f"https://gitclone.com/github.com/honmashironeko/WhiteCatToolbox/releases/latest"
-        elif "github.store" in mirror:
-
-            return f"{mirror}/honmashironeko/WhiteCatToolbox/releases/latest"
-        else:
-
-            return f"{mirror}/{self.repo_path}"
+        self.failure_log = []
         
     def run(self):
-        try:
-            self.check_for_updates()
-        except Exception as e:
-            self.check_completed.emit(False, str(e))
-    
-    def check_for_updates(self):
-        if REQUESTS_AVAILABLE:
-            return self._check_with_requests()
-        elif URLLIB_AVAILABLE:
-            return self._check_with_urllib()
-        else:
-            self.check_completed.emit(False, "网络库不可用，请安装requests模块")
-            return
-    
-    def _check_with_requests(self):
+        """执行更新检查"""
+        self.progress_updated.emit("开始检查更新...")
         
-        headers = {
-            'User-Agent': 'WhiteCatToolbox/1.0 (Windows NT 10.0; Win64; x64)',
-            'Accept': 'application/vnd.github.v3+json',
-            'Accept-Language': 'zh-CN,zh;q=0.9,en;q=0.8',
-            'Connection': 'keep-alive',
-            'Cache-Control': 'no-cache',
-        }
-        session = requests.Session()
-        session.headers.update(headers)
-        session.verify = True
-        if hasattr(ssl, 'create_default_context'):
-            session.verify = ssl.create_default_context().check_hostname
-        
-        last_error = None
-        
-        for mirror in GITHUB_MIRRORS:
-
-            if mirror in FAILED_MIRRORS:
-                print(f"[调试] 跳过已知失败的镜像: {mirror}")
-                continue
-                
+        for site in self.mirror_sites:
             try:
-                repo_url = self._get_repo_url(mirror)
-                print(f"[调试] 尝试镜像站点: {mirror}")
-                try:
-                    response = session.get(repo_url, timeout=30, verify=True)
-                except requests.exceptions.SSLError:
-
-                    print(f"[调试] SSL验证失败，尝试不验证证书: {mirror}")
-                    response = session.get(repo_url, timeout=30, verify=False)
+                self.progress_updated.emit(f"正在检查 {site['name']}...")
                 
-                print(f"[调试] HTTP状态码: {response.status_code}")
-                
-                if response.status_code == 200:
-                    data = response.json()
-                    print(f"[调试] 成功获取数据，最新版本: {data.get('tag_name', 'Unknown')}")
-
-                    FAILED_MIRRORS.discard(mirror)
-                    self._process_response_data(data)
-                    return
-                elif response.status_code == 403:
-                    print(f"[调试] API限制，尝试下一个镜像: {mirror}")
-                    continue
-                else:
-                    raise Exception(f"HTTP {response.status_code}")
-                    
-            except requests.exceptions.Timeout:
-                print(f"[调试] 请求超时，尝试下一个镜像: {mirror}")
-                last_error = "请求超时"
-                continue
-            except requests.exceptions.SSLError as e:
-                print(f"[调试] SSL错误，尝试下一个镜像: {mirror}, 错误: {e}")
-                last_error = f"SSL连接失败: {str(e)}"
-                continue
-            except requests.exceptions.ConnectionError as e:
-                print(f"[调试] 连接错误，尝试下一个镜像: {mirror}, 错误: {e}")
-                last_error = f"网络连接失败: {str(e)}"
-                continue
-            except json.JSONDecodeError as e:
-                print(f"[调试] JSON解析错误，尝试下一个镜像: {mirror}, 错误: {e}")
-                last_error = "响应数据解析失败"
-                continue
-            except Exception as e:
-                print(f"[调试] 其他错误，尝试下一个镜像: {mirror}, 错误: {e}")
-                FAILED_MIRRORS.add(mirror)
-                last_error = str(e)
-                continue
-        self.check_completed.emit(False, f"所有镜像站点都无法访问: {last_error}")
-    
-    def _check_with_urllib(self):
-        
-        headers = {
-            'User-Agent': 'WhiteCatToolbox/1.0 (Windows NT 10.0; Win64; x64)',
-            'Accept': 'application/vnd.github.v3+json',
-            'Accept-Language': 'zh-CN,zh;q=0.9,en;q=0.8',
-        }
-        ssl_contexts = []
-        try:
-            ssl_context1 = ssl.create_default_context()
-            ssl_contexts.append(ssl_context1)
-        except:
-            pass
-        try:
-            ssl_context2 = ssl.create_default_context()
-            ssl_context2.check_hostname = False
-            ssl_context2.verify_mode = ssl.CERT_NONE
-            ssl_contexts.append(ssl_context2)
-        except:
-            pass
-        
-        last_error = None
-        
-        for mirror in GITHUB_MIRRORS:
-            repo_url = self._get_repo_url(mirror)
-            print(f"[调试] urllib尝试镜像: {mirror}")
-            
-            req = urllib.request.Request(repo_url, headers=headers)
-            
-            for ssl_context in ssl_contexts:
-                try:
-                    with urllib.request.urlopen(req, context=ssl_context, timeout=30) as response:
-                        if response.status == 200:
-                            data = json.loads(response.read().decode('utf-8'))
-                            print(f"[调试] urllib成功获取数据: {mirror}")
-                            self._process_response_data(data)
+                response_data = self._fetch_with_retry(site['url'])
+                if response_data:
+                    update_info = site['parser'](response_data)
+                    if update_info:
+                        latest_version = VersionInfo(update_info['version'])
+                        
+                        if latest_version > self.current_version:
+                            self.progress_updated.emit(f"发现新版本: {latest_version}")
+                            update_info['mirror_site'] = site['name']
+                            self.update_available.emit(update_info)
                             return
-                        elif response.status == 403:
-                            print(f"[调试] urllib API限制: {mirror}")
-                            break
                         else:
-                            raise Exception(f"HTTP {response.status}")
+                            self.progress_updated.emit("当前版本已是最新")
+                            self.no_update.emit()
+                            return
                             
-                except urllib.error.URLError as e:
-                    print(f"[调试] urllib URL错误: {mirror}, {e}")
-                    last_error = str(e)
-                    continue
-                except Exception as e:
-                    print(f"[调试] urllib其他错误: {mirror}, {e}")
-                    last_error = str(e)
-                    continue
-        self.check_completed.emit(False, f"所有镜像站点都无法访问: {last_error}")
-    
-    def _process_response_data(self, data):
-        latest_version = data.get('tag_name', '')
-        release_name = data.get('name', '')
-        release_notes = data.get('body', '')
-        download_url = data.get('html_url', '')
-        published_at = data.get('published_at', '')
-        
-        print(f"[调试] 版本比较: 最新={latest_version}, 当前={CURRENT_VERSION}")
+            except Exception as e:
+                error_msg = f"{site['name']} 检查失败: {str(e)}"
+                self.failure_log.append({
+                    'site': site['name'],
+                    'error': str(e),
+                    'timestamp': datetime.now().isoformat()
+                })
+                self.progress_updated.emit(error_msg)
+                continue
+                
 
-        comparison_result = compare_versions(latest_version, CURRENT_VERSION)
-        print(f"[调试] 比较结果: {comparison_result}")
+        self.check_failed.emit("所有镜像站点检查失败")
         
-        if comparison_result > 0:
-            print("[调试] 发现新版本！")
-            update_info = {
-                'latest_version': latest_version,
-                'current_version': CURRENT_VERSION,
-                'release_name': release_name,
-                'release_notes': release_notes,
-                'download_url': download_url,
-                'published_at': published_at
+    def _fetch_with_retry(self, url: str) -> Optional[dict]:
+        """带重试的网络请求"""
+        for attempt in range(self.max_retries):
+            try:
+                if HAS_REQUESTS:
+                    return self._fetch_with_requests(url)
+                else:
+                    return self._fetch_with_urllib(url)
+            except Exception as e:
+                if attempt == self.max_retries - 1:
+                    raise e
+                time.sleep(1)
+                
+        return None
+        
+    def _fetch_with_requests(self, url: str) -> dict:
+        """使用 requests 库获取数据"""
+        headers = {
+            'User-Agent': 'White Cat Toolbox Update Checker',
+            'Accept': 'application/json'
+        }
+        
+        response = requests.get(url, headers=headers, timeout=self.timeout, verify=False)
+        response.raise_for_status()
+        return response.json()
+        
+    def _fetch_with_urllib(self, url: str) -> dict:
+        """使用 urllib 库获取数据"""
+
+        context = ssl.create_default_context()
+        context.check_hostname = False
+        context.verify_mode = ssl.CERT_NONE
+        
+        req = urllib.request.Request(
+            url,
+            headers={
+                'User-Agent': 'White Cat Toolbox Update Checker',
+                'Accept': 'application/json'
             }
-            self.update_found.emit(update_info)
-        else:
-            print("[调试] 当前已是最新版本")
-            self.check_completed.emit(True, "当前已是最新版本")
+        )
+        
+        with urllib.request.urlopen(req, timeout=self.timeout, context=context) as response:
+            data = response.read().decode('utf-8')
+            return json.loads(data)
+            
+    def _parse_github_response(self, data: dict) -> Optional[dict]:
+        """解析 GitHub API 响应"""
+        try:
+            return {
+                'version': data['tag_name'],
+                'name': data['name'],
+                'description': data['body'],
+                'download_url': data['html_url'],
+                'published_at': data['published_at'],
+                'assets': [{
+                    'name': asset['name'],
+                    'download_url': asset['browser_download_url'],
+                    'size': asset['size']
+                } for asset in data.get('assets', [])]
+            }
+        except KeyError as e:
+            raise ValueError(f"GitHub API 响应格式错误: {e}")
+            
+    def _parse_gitlab_response(self, data: dict) -> Optional[dict]:
+        """解析 GitLab API 响应"""
+        try:
+            if isinstance(data, list) and len(data) > 0:
+                latest = data[0]
+            else:
+                latest = data
+                
+            return {
+                'version': latest['tag_name'],
+                'name': latest['name'],
+                'description': latest['description'],
+                'download_url': latest['_links']['self'],
+                'published_at': latest['released_at'],
+                'assets': []
+            }
+        except KeyError as e:
+            raise ValueError(f"GitLab API 响应格式错误: {e}")
+            
+    def _parse_gitee_response(self, data: dict) -> Optional[dict]:
+        """解析 Gitee API 响应"""
+        try:
+            return {
+                'version': data['tag_name'],
+                'name': data['name'],
+                'description': data['body'],
+                'download_url': data['html_url'],
+                'published_at': data['created_at'],
+                'assets': [{
+                    'name': asset['name'],
+                    'download_url': asset['browser_download_url']
+                } for asset in data.get('assets', [])]
+            }
+        except KeyError as e:
+            raise ValueError(f"Gitee API 响应格式错误: {e}")
+            
+    def get_failure_log(self) -> List[dict]:
+        """获取失败记录"""
+        return self.failure_log.copy()
 
-class UpdateNotificationDialog(QDialog):
-    def __init__(self, update_info, parent=None):
+class UpdateDialog(QDialog):
+    """更新对话框"""
+    
+    def __init__(self, update_info: dict, parent=None):
         super().__init__(parent)
         self.update_info = update_info
-        self.setup_ui()
+        self.init_ui()
         
-    def setup_ui(self):
-        self.setWindowTitle(t("update_available"))
-        self.setFixedSize(s(500), s(400))
-        self.setModal(True)
+    def init_ui(self):
+        self.setWindowTitle("发现新版本")
+        self.setMinimumSize(500, 400)
+        self.resize(600, 500)
         
-        layout = QVBoxLayout()
-        layout.setContentsMargins(s(20), s(20), s(20), s(20))
-        layout.setSpacing(s(16))
-
-        title_label = QLabel("🎉 " + t("new_version_available"))
-
-        title_label.setFont(QFont(get_system_font(), s(16), QFont.Weight.Bold))
-        title_label.setStyleSheet(f"color: {colors['primary']}; margin-bottom: {s(8)}px;")
-        layout.addWidget(title_label)
-
-        version_layout = QHBoxLayout()
-        version_layout.setSpacing(s(20))
+        layout = QVBoxLayout(self)
         
-        current_label = QLabel(f"{t('current_version')}: {self.update_info['current_version']}")
-        current_label.setStyleSheet(f"color: {colors['text_secondary']}; font-size: {s(12)}pt;")
+
+        info_layout = QHBoxLayout()
+        info_layout.addWidget(QLabel("新版本:"))
         
-        latest_label = QLabel(f"{t('latest_version')}: {self.update_info['latest_version']}")
-        latest_label.setStyleSheet(f"color: {colors['success']}; font-size: {s(12)}pt; font-weight: bold;")
+        version_label = QLabel(self.update_info['version'])
+        version_label.setProperty("class", "version_label")
+        info_layout.addWidget(version_label)
         
-        version_layout.addWidget(current_label)
-        version_layout.addStretch()
-        version_layout.addWidget(latest_label)
-        layout.addLayout(version_layout)
+        info_layout.addStretch()
+        
+        mirror_label = QLabel(f"来源: {self.update_info.get('mirror_site', '未知')}")
+        info_layout.addWidget(mirror_label)
+        
+        layout.addLayout(info_layout)
+        
 
-        if self.update_info.get('release_name'):
-            release_title = QLabel(f"📦 {self.update_info['release_name']}")
+        if 'published_at' in self.update_info:
+            time_label = QLabel(f"发布时间: {self.update_info['published_at']}")
+            layout.addWidget(time_label)
+            
 
-            release_title.setFont(QFont(get_system_font(), s(13), QFont.Weight.Medium))
-            release_title.setStyleSheet(f"color: {colors['text']}; margin: {s(8)}px 0;")
-            layout.addWidget(release_title)
+        layout.addWidget(QLabel("更新说明:"))
+        
+        description_text = QTextEdit()
+        description_text.setReadOnly(True)
+        description_text.setMaximumHeight(200)
+        description_text.setPlainText(self.update_info.get('description', '暂无更新说明'))
+        layout.addWidget(description_text)
+        
 
-        notes_label = QLabel(t("release_notes"))
+        if self.update_info.get('assets'):
+            layout.addWidget(QLabel("下载文件:"))
+            
+            assets_text = QTextEdit()
+            assets_text.setReadOnly(True)
+            assets_text.setMaximumHeight(100)
+            
+            assets_info = []
+            for asset in self.update_info['assets']:
+                size_info = f" ({asset['size']} bytes)" if 'size' in asset else ""
+                assets_info.append(f"• {asset['name']}{size_info}")
+                
+            assets_text.setPlainText('\n'.join(assets_info))
+            layout.addWidget(assets_text)
+            
 
-        notes_label.setFont(QFont(get_system_font(), s(11), QFont.Weight.Medium))
-        notes_label.setStyleSheet(f"color: {colors['text']}; margin-top: {s(8)}px;")
-        layout.addWidget(notes_label)
-
-        release_notes = QTextEdit()
-        release_notes.setPlainText(self.update_info.get('release_notes', t('no_release_notes')))
-        release_notes.setReadOnly(True)
-        release_notes.setMaximumHeight(s(150))
-        release_notes.setStyleSheet(f"""
-            QTextEdit {{
-                background: {colors['background_very_light']};
-                border: 1px solid {colors['border_light']};
-                border-radius: {params['border_radius_small']};
-                padding: {s(8)}px;
-                font-size: {s(9)}pt;
-                color: {colors['text_secondary']};
-            }}
-        """)
-        layout.addWidget(release_notes)
+        self.auto_check = QCheckBox("启动时自动检查更新")
+        self.auto_check.setChecked(True)
+        layout.addWidget(self.auto_check)
+        
 
         button_layout = QHBoxLayout()
-        button_layout.setSpacing(s(12))
-
-        later_btn = QPushButton(t("remind_later"))
-        later_btn.setMinimumSize(s(100), s(36))
-        later_btn.setStyleSheet(f"""
-            QPushButton {{
-                background: {colors['background_light']};
-                border: 1px solid {colors['border']};
-                border-radius: {params['border_radius_small']};
-                color: {colors['text_secondary']};
-                font-weight: 500;
-                font-size: {s(10)}pt;
-                padding: {s(8)}px {s(16)}px;
-            }}
-            QPushButton:hover {{
-                background: {colors['border']};
-                border-color: {colors['secondary']};
-                color: {colors['text']};
-            }}
-        """)
-        later_btn.clicked.connect(self.reject)
-
-        download_btn = QPushButton("🔽 " + t("download_update"))
-        download_btn.setMinimumSize(s(120), s(36))
-        download_btn.setStyleSheet(f"""
-            QPushButton {{
-                background: qlineargradient(x1: 0, y1: 0, x2: 0, y2: 1,
-                                          stop: 0 {colors['primary']}, 
-                                          stop: 1 {colors['primary_hover']});
-                border: none;
-                border-radius: {params['border_radius_small']};
-                color: {colors['text_on_primary']};
-                font-weight: 600;
-                font-size: {s(10)}pt;
-                padding: {s(8)}px {s(16)}px;
-            }}
-            QPushButton:hover {{
-                background: qlineargradient(x1: 0, y1: 0, x2: 0, y2: 1,
-                                          stop: 0 {colors['primary_hover']}, 
-                                          stop: 1 {colors['primary_pressed']});
-            }}
-        """)
-        download_btn.clicked.connect(self.open_download_page)
         
-        button_layout.addStretch()
-        button_layout.addWidget(later_btn)
+        download_btn = QPushButton("下载更新")
+        download_btn.clicked.connect(self.download_update)
         button_layout.addWidget(download_btn)
+        
+        later_btn = QPushButton("稍后提醒")
+        later_btn.clicked.connect(self.remind_later)
+        button_layout.addWidget(later_btn)
+        
+        ignore_btn = QPushButton("忽略此版本")
+        ignore_btn.clicked.connect(self.ignore_version)
+        button_layout.addWidget(ignore_btn)
+        
         layout.addLayout(button_layout)
         
-        self.setLayout(layout)
-
-        self.setStyleSheet(f"""
-            QDialog {{
-                background: {colors['white']};
-                border-radius: {params['border_radius']};
-            }}
-        """)
-    
-    def open_download_page(self):
-        if self.update_info.get('download_url'):
-            QDesktopServices.openUrl(QUrl(self.update_info['download_url']))
+    def download_update(self):
+        """下载更新"""
+        import webbrowser
+        webbrowser.open(self.update_info['download_url'])
         self.accept()
+        
+    def remind_later(self):
+        """稍后提醒"""
+        self.accept()
+        
+    def ignore_version(self):
+        """忽略此版本"""
+
+        self.reject()
+        
+    def is_auto_check_enabled(self) -> bool:
+        """是否启用自动检查"""
+        return self.auto_check.isChecked()
 
 class UpdateManager(QObject):
+    """更新管理器"""
     
+
+    update_available = Signal(dict)
+    update_check_failed = Signal(str)
     
-    def __init__(self, parent=None):
+    def __init__(self, current_version: str, config_manager=None, parent=None):
         super().__init__(parent)
-        self.parent_window = parent
-        self.checker = None
+        self.current_version = current_version
+        self.config_manager = config_manager
+        self.checker_thread = None
         
-    def check_for_updates(self, show_no_update_message=True):
+
+        self.auto_check_timer = QTimer()
+        self.auto_check_timer.timeout.connect(self.check_for_updates)
         
-        if self.checker and self.checker.isRunning():
+
+        self.load_config()
+        
+    def load_config(self):
+        """加载配置"""
+        if self.config_manager:
+            config = self.config_manager.get_config()
+            self.auto_check_enabled = config.get('auto_check_updates', True)
+            self.check_interval = config.get('update_check_interval', 24)
+            self.ignored_versions = config.get('ignored_versions', [])
+        else:
+            self.auto_check_enabled = True
+            self.check_interval = 24
+            self.ignored_versions = []
+            
+    def save_config(self):
+        """保存配置"""
+        if self.config_manager:
+            config = self.config_manager.get_config()
+            config['auto_check_updates'] = self.auto_check_enabled
+            config['update_check_interval'] = self.check_interval
+            config['ignored_versions'] = self.ignored_versions
+            self.config_manager.save_config(config)
+            
+    def start_auto_check(self):
+        """启动自动检查"""
+        if self.auto_check_enabled:
+
+            interval_ms = self.check_interval * 60 * 60 * 1000
+            self.auto_check_timer.start(interval_ms)
+            
+    def stop_auto_check(self):
+        """停止自动检查"""
+        self.auto_check_timer.stop()
+        
+    def check_for_updates(self, show_no_update=False):
+        """检查更新"""
+        if self.checker_thread and self.checker_thread.isRunning():
             return
             
-        self.checker = UpdateChecker()
-        self.checker.update_found.connect(self.on_update_found)
-        self.checker.check_completed.connect(
-            lambda success, message: self.on_check_completed(success, message, show_no_update_message)
+        self.checker_thread = UpdateChecker(self.current_version)
+        self.checker_thread.update_available.connect(
+            lambda info: self._on_update_available(info, show_no_update)
         )
-        self.checker.start()
-    
-    def on_update_found(self, update_info):
+        self.checker_thread.no_update.connect(
+            lambda: self._on_no_update(show_no_update)
+        )
+        self.checker_thread.check_failed.connect(self._on_check_failed)
         
-        dialog = UpdateNotificationDialog(update_info, self.parent_window)
-        dialog.exec()
-    
-    def on_check_completed(self, success, message, show_no_update_message):
+        self.checker_thread.start()
         
-        if not success:
+    def _on_update_available(self, update_info: dict, show_dialog=True):
+        """处理有更新可用"""
+        version = update_info['version']
+        
 
-            QMessageBox.warning(
-                self.parent_window,
-                t("update_check_failed"),
-                f"{t('update_check_error')}: {message}"
-            )
-        elif show_no_update_message and "最新版本" in message:
+        if version in self.ignored_versions:
+            return
+            
 
+        self.update_available.emit(update_info)
+            
+        if show_dialog:
+            dialog = UpdateDialog(update_info)
+            result = dialog.exec()
+            
+
+            self.auto_check_enabled = dialog.is_auto_check_enabled()
+            self.save_config()
+            
+
+            if result == QDialog.Rejected:
+                self.ignored_versions.append(version)
+                self.save_config()
+                
+    def _on_no_update(self, show_message=False):
+        """处理无更新"""
+        if show_message:
             QMessageBox.information(
-                self.parent_window,
-                t("update_check"),
-                t("already_latest_version")
+                None, "检查更新", "当前版本已是最新版本。"
             )
-    
-    def check_for_updates_on_startup(self):
-        
-        QTimer.singleShot(3000, lambda: self.check_for_updates(show_no_update_message=False))
-    
-class PromotionUpdateChecker(QThread):
-    
-    
-    update_completed = Signal(bool, str)
-    
-    def __init__(self):
-        super().__init__()
-        self.promotion_repo_path = "repos/honmashironeko/WhiteCatToolbox/contents/promotion"
-        self.promotion_dir = "promotion"
-        
-    def _get_promotion_url(self, mirror):
-        
-        if "gitclone.com" in mirror:
-            return f"https://gitclone.com/github.com/honmashironeko/WhiteCatToolbox/contents/promotion"
-        elif "github.store" in mirror:
-            return f"{mirror}/honmashironeko/WhiteCatToolbox/contents/promotion"
-        else:
-            return f"{mirror}/{self.promotion_repo_path}"
-        
-    def run(self):
-        
-        try:
-            self.check_and_update_promotion()
-        except Exception as e:
-            print(f"[调试] 推广更新检查异常: {e}")
-            self.update_completed.emit(False, f"推广更新检查失败: {str(e)}")
-    
-    def check_and_update_promotion(self):
-        
-        print("[调试] 开始检查推广内容更新...")
-        
-        if REQUESTS_AVAILABLE:
-            self._update_with_requests()
-        elif URLLIB_AVAILABLE:
-            self._update_with_urllib()
-        else:
-            self.update_completed.emit(False, "网络库不可用")
-    
-    def _update_with_requests(self):
-        
-        headers = {
-            'User-Agent': 'WhiteCatToolbox/1.0 (Windows NT 10.0; Win64; x64)',
-            'Accept': 'application/vnd.github.v3+json',
-            'Accept-Language': 'zh-CN,zh;q=0.9,en;q=0.8',
-        }
-        session = requests.Session()
-        session.headers.update(headers)
-        
-        last_error = None
-        
-        for mirror in GITHUB_MIRRORS:
-            try:
-                promotion_url = self._get_promotion_url(mirror)
-                print(f"[调试] 推广内容尝试镜像: {mirror}")
-                try:
-                    response = session.get(promotion_url, timeout=30, verify=True)
-                except requests.exceptions.SSLError:
-                    print(f"[调试] 推广SSL验证失败，尝试不验证证书: {mirror}")
-                    response = session.get(promotion_url, timeout=30, verify=False)
-                
-                if response.status_code == 404:
-                    print(f"[调试] 推广文件夹不存在于镜像: {mirror}")
-                    continue
-                
-                if response.status_code == 200:
-                    files_info = response.json()
-                    print(f"[调试] 推广成功获取文件列表: {mirror}, 文件数: {len(files_info)}")
-                    self._process_promotion_files(files_info, session, mirror)
-                    return
-                elif response.status_code == 403:
-                    print(f"[调试] 推广API限制，尝试下一个镜像: {mirror}")
-                    continue
-                else:
-                    raise Exception(f"HTTP {response.status_code}")
-                    
-            except requests.exceptions.Timeout:
-                print(f"[调试] 推广请求超时，尝试下一个镜像: {mirror}")
-                last_error = "请求超时"
-                continue
-            except requests.exceptions.ConnectionError as e:
-                print(f"[调试] 推广连接错误，尝试下一个镜像: {mirror}, 错误: {e}")
-                last_error = f"网络连接失败: {str(e)}"
-                continue
-            except json.JSONDecodeError as e:
-                print(f"[调试] 推广JSON解析错误，尝试下一个镜像: {mirror}, 错误: {e}")
-                last_error = "响应数据解析失败"
-                continue
-            except Exception as e:
-                print(f"[调试] 推广其他错误，尝试下一个镜像: {mirror}, 错误: {e}")
-                last_error = str(e)
-                continue
-        if last_error:
-            self.update_completed.emit(False, f"推广内容更新失败: {last_error}")
-        else:
-            self.update_completed.emit(True, "推广内容已是最新")
-    
-    def _process_promotion_files(self, files_info, session, mirror):
-        
-        if not os.path.exists(self.promotion_dir):
-            os.makedirs(self.promotion_dir)
-        
-        updated_files = []
-        for file_info in files_info:
-            if file_info.get('type') == 'file':
-                file_name = file_info.get('name')
-                download_url = file_info.get('download_url')
-                remote_sha = file_info.get('sha')
-                
-                if file_name and download_url:
+            
+    def _on_check_failed(self, error_message: str):
+        """处理检查失败"""
 
-                    if self._download_and_replace_file(file_name, download_url, session, remote_sha=remote_sha):
-                        updated_files.append(file_name)
+        self.update_check_failed.emit(error_message)
         
-        if updated_files:
-            print(f"[调试] 推广成功更新 {len(updated_files)} 个文件: {updated_files}")
-            self.update_completed.emit(True, f"推广内容已更新 ({len(updated_files)} 个文件)")
+        QMessageBox.warning(
+            None, "检查更新失败", f"无法检查更新：{error_message}"
+        )
+        
+    def set_auto_check_enabled(self, enabled: bool):
+        """设置自动检查"""
+        self.auto_check_enabled = enabled
+        self.save_config()
+        
+        if enabled:
+            self.start_auto_check()
         else:
-            print("[调试] 推广内容无需更新")
-            self.update_completed.emit(True, "推广内容已是最新")
-    
-    def _download_and_replace_file(self, file_name, download_url, session, remote_sha=None):
-        
-        try:
-            local_file_path = os.path.join(self.promotion_dir, file_name)
-            if os.path.exists(local_file_path) and remote_sha:
-                try:
-                    with open(local_file_path, 'r', encoding='utf-8') as f:
-                        local_content = f.read()
-                    
-                    import hashlib
-                    local_blob = f"blob {len(local_content.encode('utf-8'))}\0{local_content}"
-                    local_sha = hashlib.sha1(local_blob.encode('utf-8')).hexdigest()
-                    
-                    if local_sha == remote_sha:
-                        print(f"[调试] 推广文件SHA相同，跳过下载: {file_name}")
-                        return False
-                except Exception as e:
-                    print(f"[调试] 计算本地推广文件SHA失败: {e}")
-            download_urls = []
-            download_urls.append(download_url)
-            if "raw.githubusercontent.com" in download_url:
-                for raw_mirror in RAW_GITHUB_MIRRORS[1:]:
-                    if raw_mirror == "https://cdn.jsdelivr.net/gh":
-
-                        parts = download_url.replace("https://raw.githubusercontent.com/", "").split("/")
-                        if len(parts) >= 3:
-                            owner, repo, branch = parts[0], parts[1], parts[2]
-                            file_path = "/".join(parts[3:])
-                            jsdelivr_url = f"{raw_mirror}/{owner}/{repo}@{branch}/{file_path}"
-                            download_urls.append(jsdelivr_url)
-                    else:
-                        mirror_url = download_url.replace("https://raw.githubusercontent.com", raw_mirror)
-                        download_urls.append(mirror_url)
-            for url in download_urls:
-                try:
-                    print(f"[调试] 尝试下载推广文件 {file_name} 从: {url}")
-                    try:
-                        response = session.get(url, timeout=30, verify=True)
-                    except requests.exceptions.SSLError:
-                        print(f"[调试] 推广下载SSL失败，尝试不验证: {url}")
-                        response = session.get(url, timeout=30, verify=False)
-                    
-                    if response.status_code == 200:
-                        new_content = response.text
-                        if os.path.exists(local_file_path):
-                            backup_path = f"{local_file_path}.backup"
-                            shutil.copy2(local_file_path, backup_path)
-                            print(f"[调试] 创建推广文件备份: {backup_path}")
-                        with open(local_file_path, 'w', encoding='utf-8') as f:
-                            f.write(new_content)
-                        
-                        print(f"[调试] 成功更新推广文件: {file_name}")
-                        return True
-                    else:
-                        print(f"[调试] 推广下载失败: {file_name}, HTTP {response.status_code}")
-                        continue
-                        
-                except Exception as e:
-                    print(f"[调试] 推广下载异常 {file_name} from {url}: {e}")
-                    continue
+            self.stop_auto_check()
             
-            print(f"[调试] 所有下载链接都失败: {file_name}")
-            return False
-            
-        except Exception as e:
-            print(f"[调试] 推广下载文件失败 {file_name}: {e}")
-            return False
-    
-    def _update_with_urllib(self):
+    def set_check_interval(self, hours: int):
+        """设置检查间隔"""
+        self.check_interval = hours
+        self.save_config()
         
-        headers = {
-            'User-Agent': 'WhiteCatToolbox/1.0 (Windows NT 10.0; Win64; x64)',
-            'Accept': 'application/vnd.github.v3+json',
-            'Accept-Language': 'zh-CN,zh;q=0.9,en;q=0.8',
-        }
-        ssl_contexts = []
-        try:
-            ssl_context1 = ssl.create_default_context()
-            ssl_contexts.append(ssl_context1)
-        except:
-            pass
-        
-        try:
-            ssl_context2 = ssl.create_default_context()
-            ssl_context2.check_hostname = False
-            ssl_context2.verify_mode = ssl.CERT_NONE
-            ssl_contexts.append(ssl_context2)
-        except:
-            pass
-        
-        for mirror in GITHUB_MIRRORS:
-            promotion_url = self._get_promotion_url(mirror)
-            print(f"[调试] 推广urllib尝试镜像: {mirror}")
-            
-            req = urllib.request.Request(promotion_url, headers=headers)
-            
-            for ssl_context in ssl_contexts:
-                try:
-                    with urllib.request.urlopen(req, context=ssl_context, timeout=30) as response:
-                        if response.status == 200:
-                            data = json.loads(response.read().decode('utf-8'))
-                            print(f"[调试] 推广urllib成功获取数据: {mirror}")
-                            self._process_promotion_files_urllib(data)
-                            return
-                        elif response.status == 404:
-                            print(f"[调试] 推广文件夹不存在: {mirror}")
-                            break
-                        elif response.status == 403:
-                            print(f"[调试] 推广urllib API限制: {mirror}")
-                            break
-                except:
-                    continue
-        
-        self.update_completed.emit(False, "无法连接到推广内容服务器")
-    
-    def _process_promotion_files_urllib(self, files_info):
-        
-        if not os.path.exists(self.promotion_dir):
-            os.makedirs(self.promotion_dir)
-        
-        updated_files = []
-        for file_info in files_info:
-            if file_info.get('type') == 'file':
-                file_name = file_info.get('name')
-                download_url = file_info.get('download_url')
-                
-                if file_name and download_url:
-                    if self._download_file_urllib(file_name, download_url):
-                        updated_files.append(file_name)
-        
-        if updated_files:
-            self.update_completed.emit(True, f"推广内容已更新 ({len(updated_files)} 个文件)")
-        else:
-            self.update_completed.emit(True, "推广内容已是最新")
-    
-    def _download_file_urllib(self, file_name, download_url):
-        
-        try:
-            local_file_path = os.path.join(self.promotion_dir, file_name)
-            download_urls = [download_url]
-            
-            if "raw.githubusercontent.com" in download_url:
-                for raw_mirror in RAW_GITHUB_MIRRORS[1:]:
-                    if raw_mirror != "https://cdn.jsdelivr.net/gh":
-                        mirror_url = download_url.replace("https://raw.githubusercontent.com", raw_mirror)
-                        download_urls.append(mirror_url)
-            ssl_contexts = []
-            try:
-                ssl_context1 = ssl.create_default_context()
-                ssl_contexts.append(ssl_context1)
-            except:
-                pass
-            
-            try:
-                ssl_context2 = ssl.create_default_context()
-                ssl_context2.check_hostname = False
-                ssl_context2.verify_mode = ssl.CERT_NONE
-                ssl_contexts.append(ssl_context2)
-            except:
-                pass
-            for url in download_urls:
-                req = urllib.request.Request(url, headers={'User-Agent': 'WhiteCatToolbox/1.0'})
-                
-                for ssl_context in ssl_contexts:
-                    try:
-                        with urllib.request.urlopen(req, context=ssl_context, timeout=30) as response:
-                            if response.status == 200:
-                                new_content = response.read().decode('utf-8')
-                                if os.path.exists(local_file_path):
-                                    try:
-                                        with open(local_file_path, 'r', encoding='utf-8') as f:
-                                            current_content = f.read()
-                                        if current_content == new_content:
-                                            return False
-                                    except:
-                                        pass
-                                if os.path.exists(local_file_path):
-                                    backup_path = f"{local_file_path}.backup"
-                                    shutil.copy2(local_file_path, backup_path)
-                                with open(local_file_path, 'w', encoding='utf-8') as f:
-                                    f.write(new_content)
-                                
-                                print(f"[调试] urllib成功下载推广文件: {file_name}")
-                                return True
-                    except:
-                        continue
-            
-            return False
-            
-        except Exception as e:
-            print(f"[调试] urllib下载推广文件失败 {file_name}: {e}")
-            return False
-
-class PromotionUpdateManager(QObject):
-    
-    
-    def __init__(self, parent=None):
-        super().__init__(parent)
-        self.parent_window = parent
-        self.checker = None
-        
-    def check_promotion_enabled(self):
-        try:
-            config_path = "promotion_config.json"
-            if os.path.exists(config_path):
-                with open(config_path, 'r', encoding='utf-8') as f:
-                    config = json.load(f)
-                return config.get('ads_enabled', True)
-        except Exception as e:
-            print(f"[调试] 读取推广配置失败: {e}")
-        return True
-    
-    def check_for_promotion_updates(self):
-        if not self.check_promotion_enabled():
-            print("[调试] 推广页面未开启，跳过推广内容更新检查")
-            return
-        
-        if self.checker and self.checker.isRunning():
-            print("[调试] 推广更新检查已在运行中")
-            return
-        
-        print("[调试] 开始推广内容更新检查...")
-        self.checker = PromotionUpdateChecker()
-        self.checker.update_completed.connect(self.on_promotion_update_completed)
-        self.checker.start()
-    
-    def on_promotion_update_completed(self, success, message):
-        if success:
-            print(f"[调试] 推广内容更新成功: {message}")
-        else:
-            print(f"[调试] 推广内容更新失败: {message}")
-        
+        if self.auto_check_enabled:
+            self.stop_auto_check()
+            self.start_auto_check()

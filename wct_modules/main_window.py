@@ -1,560 +1,496 @@
-import os
-import json
-import platform
-import shutil
-import datetime
-import subprocess
-import zipfile
 from PySide6.QtWidgets import (
-    QMainWindow, QHBoxLayout, QVBoxLayout, QWidget, QListWidget,
-    QTabWidget, QLabel, QPushButton, QSplitter, QFrame, QMenu,
-    QFileDialog, QMessageBox, QComboBox, QScrollArea, QSizePolicy
+    QMainWindow, QWidget, QVBoxLayout, QHBoxLayout, 
+    QSplitter, QScrollArea, QFrame, QLabel, QMessageBox,
+    QStatusBar, QTabWidget
 )
 from PySide6.QtCore import Qt, QTimer
-from PySide6.QtGui import QFont, QIcon, QBrush, QColor
-from .theme import colors, fonts, params
-from .styles import (
-    get_main_window_style, get_splitter_style, get_panel_style,
-    get_title_panel_style, get_title_label_style, get_list_panel_style,
-    get_tool_list_style, get_icon_button_style
-)
-from .tool_operation import ToolOperationPage
-from .promotion import PromotionPage
-from .config import ToolConfigParser
-from .update_checker import UpdateManager, PromotionUpdateManager
-from . import utils
-from .utils import s, get_system_font
-from .i18n import t, set_language, get_current_language
+from PySide6.QtGui import QIcon, QAction, QFont
+import os
+import json
+
+from .floating_toolbar import FloatingToolBar
+from .tool_operation import ToolOperationWidget
+from .terminal_area import TerminalArea
+from .tool_scanner import ToolScanner
+from .config import ConfigManager
+from .utils import get_system_font
+
+from .search_system import SearchWidget, AdvancedSearchDialog
+from .virtual_env import VirtualEnvWidget
+from .system_env import SystemEnvWidget
+
+from .update_checker import UpdateManager
+from .theme_manager import ThemeManager
+from .font_scale_widget import FontScaleWidget, GlobalFontScaleManager
+from .promotion_widget import PromotionWidget
+from .process_notification_manager import ProcessNotificationManager
+
 class MainWindow(QMainWindow):
     def __init__(self):
         super().__init__()
-        self.tool_pages = {}
-        self.promotion_page = PromotionPage()
-        self.update_manager = UpdateManager(self)
-        self.promotion_update_manager = PromotionUpdateManager(self)
-        self.setup_ui()
-        self.init_tools()
-        self.update_manager.check_for_updates_on_startup()
-        QTimer.singleShot(5000, self.promotion_update_manager.check_for_promotion_updates)
-    def setup_ui(self):
-        self.setWindowTitle(t("app_title"))
-        self.setGeometry(0, 0, 1600, 900)
-        icon_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "favicon.ico")
-        if os.path.exists(icon_path):
-            self.setWindowIcon(QIcon(icon_path))
-        self.setStyleSheet(get_main_window_style())
-        scroll_area = QScrollArea()
-        scroll_area.setWidgetResizable(True)
-        scroll_area.setHorizontalScrollBarPolicy(Qt.ScrollBarAsNeeded)
-        scroll_area.setVerticalScrollBarPolicy(Qt.ScrollBarAsNeeded)
-        scroll_area.setStyleSheet("QScrollArea { border: none; background: transparent; }")
-        self.setCentralWidget(scroll_area)
+        self.config_manager = ConfigManager()
+        
+
+        self.theme_manager = ThemeManager(self.config_manager)
+        
+
+        self.font_scale_manager = GlobalFontScaleManager(self.config_manager)
+        
+
+        self.tool_scanner = ToolScanner()
+        
+
+        
+
+        self.update_manager = UpdateManager("1.0.0")
+        
+
+        self.current_selected_tool = None
+        
+
+        self.promotion_widget = None
+        self.promotion_shown = False
+        
+
+        self.notification_manager = None
+        
+
+
+        self.search_widget = None
+        self.virtual_env_widget = None
+        self.system_env_widget = None
+
+        self.advanced_search_dialog = None
+        
+        self.init_ui()
+        
+
+        self.setup_connections()
+        
+
+        self.apply_initial_theme_and_font()
+        
+
+        self.notification_manager = ProcessNotificationManager(self)
+        
+        self.load_tools()
+        
+    def init_ui(self):
+        self.setWindowTitle("White Cat Toolbox")
+        self.setMinimumSize(1200, 800)
+        self.resize(1600, 1000)
+        
         central_widget = QWidget()
-        central_widget.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
-        central_widget.setStyleSheet("QWidget { background: transparent; }")
-        scroll_area.setWidget(central_widget)
-        main_splitter = QSplitter(Qt.Horizontal)
-        main_splitter.setStyleSheet(get_splitter_style())
-        left_widget = self.create_tool_list()
-        main_splitter.addWidget(left_widget)
-        self.right_stack = QTabWidget()
-        self.right_stack.setTabsClosable(False)
-        self.right_stack.tabBar().hide()  
-        self.right_stack.setStyleSheet("""
-            QTabWidget { background: transparent; }
-            QTabWidget::pane { background: transparent; border: none; }
-        """)
-        self.right_stack.addTab(self.promotion_page, t("promotion"))
-        main_splitter.addWidget(self.right_stack)
-        main_splitter.setStretchFactor(0, 1)
-        main_splitter.setStretchFactor(1, 7)
-        layout = QHBoxLayout()
-        layout.setContentsMargins(int(params["main_margin"]), int(params["main_margin"]), int(params["main_margin"]), int(params["main_margin"]))
-        layout.setSpacing(int(params["main_spacing"]))
-        layout.addWidget(main_splitter)
-        central_widget.setLayout(layout)
-    def create_tool_list(self):
-        widget = QWidget()
-        widget.setStyleSheet(get_panel_style())
-        layout = QVBoxLayout()
-        layout.setContentsMargins(int(params["main_margin"]), int(params["main_margin"]), int(params["main_margin"]), int(params["main_margin"]))
-        layout.setSpacing(12)
-        title_widget = QWidget()
-        title_widget.setStyleSheet(get_title_panel_style())
-        title_layout = QVBoxLayout()
-        title_layout.setContentsMargins(8, 8, 8, 8)
-        title_label = QLabel(t("tool_list"))
-        title_label.setFont(QFont(fonts["system"], s(12), QFont.Bold))
-        title_label.setAlignment(Qt.AlignCenter | Qt.AlignVCenter)
-        title_label.setStyleSheet(get_title_label_style())
-        title_layout.addWidget(title_label)
-        title_button_layout = self.create_enhanced_control_panel()
-        title_layout.addLayout(title_button_layout)
-        title_widget.setLayout(title_layout)
-        layout.addWidget(title_widget)
-        list_widget = QWidget()
-        list_widget.setStyleSheet(get_list_panel_style())
-        list_layout = QVBoxLayout()
-        list_layout.setContentsMargins(8, 8, 8, 8)
-        self.tool_list = QListWidget()
-        self.tool_list.currentRowChanged.connect(self.on_tool_selected)
-        self.tool_list.setSelectionMode(QListWidget.SingleSelection)
-        self.tool_list.itemClicked.connect(self.on_item_clicked)
-        self.tool_list.setContextMenuPolicy(Qt.CustomContextMenu)
-        self.tool_list.customContextMenuRequested.connect(self.show_tool_list_context_menu)
-        self.tool_list.setStyleSheet(get_tool_list_style())
-        list_layout.addWidget(self.tool_list)
-        list_widget.setLayout(list_layout)
-        layout.addWidget(list_widget)
-        widget.setLayout(layout)
-        return widget
-    def create_enhanced_control_panel(self):
-        main_layout = QHBoxLayout()
-        main_layout.setSpacing(s(8))
+        self.setCentralWidget(central_widget)
+        
+        main_layout = QVBoxLayout(central_widget)
         main_layout.setContentsMargins(0, 0, 0, 0)
-        home_btn = QPushButton(" 🏠 ")
-        home_btn.setMinimumHeight(s(32))
-        home_btn.setMinimumWidth(s(50))
-        home_btn.setSizePolicy(QSizePolicy.Preferred, QSizePolicy.Fixed)
-        home_btn.setToolTip(t("home_tooltip"))
-        home_btn.setCursor(Qt.PointingHandCursor)
-        home_btn.setStyleSheet(f"""
-            QPushButton {{
-                background-color: #4a90e2;
-                border: none;
-                border-radius: {s(6)}px;
-                color: white;
-                font-weight: 600;
-                font-size: {s(12)}pt;
-                padding: {s(6)}px {s(12)}px;
-            }}
-            QPushButton:hover {{
-                background-color: #357abd;
-            }}
-            QPushButton:pressed {{
-                background-color: #2c5aa0;
-            }}
-        """)
-        home_btn.clicked.connect(self.clear_selection)
-        main_layout.addWidget(home_btn)
-        lang_btn = QPushButton(t("language_btn"))
-        lang_btn.setMinimumHeight(s(32))
-        lang_btn.setMinimumWidth(s(50))
-        lang_btn.setSizePolicy(QSizePolicy.Preferred, QSizePolicy.Fixed)
-        lang_btn.setToolTip(t("language_tooltip"))
-        lang_btn.setCursor(Qt.PointingHandCursor)
-        lang_btn.setStyleSheet(f"""
-            QPushButton {{
-                background-color: #28a745;
-                border: none;
-                border-radius: {s(6)}px;
-                color: white;
-                font-weight: 600;
-                font-size: {s(12)}pt;
-                padding: {s(6)}px {s(12)}px;
-            }}
-            QPushButton:hover {{
-                background-color: #218838;
-            }}
-            QPushButton:pressed {{
-                background-color: #1e7e34;
-            }}
-        """)
-        lang_btn.clicked.connect(self.switch_language)
-        main_layout.addWidget(lang_btn)
-        main_layout.addStretch()
-        current_scale = f"{int(utils.SCALE_FACTOR * 100)}%"
-        self.scale_btn = QPushButton(f"⚡ {current_scale}")
-        self.scale_btn.setMinimumHeight(s(32))
-        self.scale_btn.setMinimumWidth(s(80))
-        self.scale_btn.setSizePolicy(QSizePolicy.Preferred, QSizePolicy.Fixed)
-        self.scale_btn.setToolTip(t("scale_tooltip"))
-        self.scale_btn.setCursor(Qt.PointingHandCursor)
-        self.scale_btn.setStyleSheet(f"""
-            QPushButton {{
-                background-color: #6c757d;
-                border: none;
-                border-radius: {s(6)}px;
-                color: white;
-                font-weight: 600;
-                font-size: {s(10)}pt;
-                padding: {s(6)}px {s(12)}px;
-                text-align: center;
-            }}
-            QPushButton:hover {{
-                background-color: #545b62;
-            }}
-            QPushButton:pressed {{
-                background-color: #495057;
-            }}
-        """)
-        self.scale_btn.clicked.connect(self.show_scale_menu)
-        main_layout.addWidget(self.scale_btn)
-        return main_layout
-    def show_scale_menu(self):
-        menu = QMenu(self)
-        menu.setFont(QFont(fonts["system"], s(10)))
-        menu.setStyleSheet(f"""
-            QMenu {{
-                background-color: #ffffff;
-                border: 1px solid #e9ecef;
-                border-radius: {s(8)}px;
-                padding: {s(6)}px;
-                font-weight: 500;
-            }}
-            QMenu::item {{
-                background-color: transparent;
-                padding: {s(8)}px {s(16)}px;
-                border-radius: {s(4)}px;
-                color: #495057;
-                min-width: {s(100)}px;
-            }}
-            QMenu::item:selected {{
-                background-color: #4a90e2;
-                color: white;
-            }}
-            QMenu::item:disabled {{
-                color: #6c757d;
-                background-color: #f8f9fa;
-            }}
-        """)
-        scale_options = [
-            ("75%", t("compact_mode")),
-            ("100%", t("standard_mode")), 
-            ("125%", t("comfortable_mode")),
-            ("150%", t("large_text_mode")),
-            ("175%", t("extra_large_mode")),
-            ("200%", t("maximum_mode"))
-        ]
-        current_scale = f"{int(utils.SCALE_FACTOR * 100)}%"
-        for scale, description in scale_options:
-            action_text = f"⚡ {scale} - {description}"
-            if scale == current_scale:
-                action_text = f"✓ {scale} - {description} ({t('current')})"
-            action = menu.addAction(action_text)
-            if scale == current_scale:
-                action.setEnabled(False)
-            else:
-                action.triggered.connect(lambda checked, s=scale: self.on_scale_changed(s))
-        button_pos = self.scale_btn.mapToGlobal(self.scale_btn.rect().bottomLeft())
-        menu.exec(button_pos)
-    def init_tools(self):
-        tools_dir = "tools"
-        tools = []
-        if os.path.exists(tools_dir):
-            for item in os.listdir(tools_dir):
-                item_path = os.path.join(tools_dir, item)
-                if os.path.isdir(item_path):
-                    config_path = os.path.join(item_path, "wct_config.txt")
-                    if os.path.exists(config_path):
-                        tools.append(item)
-        for tool in tools:
-            self.tool_list.addItem(tool)
-            item = self.tool_list.item(self.tool_list.count() - 1)
-            item.setFont(QFont(get_system_font(), s(11), QFont.Bold))
-            tool_page = ToolOperationPage(tool)
-            self.tool_pages[tool] = tool_page
-            self.right_stack.addTab(tool_page, "")
-        self.right_stack.setCurrentIndex(0)
-        self.tool_list.setCurrentRow(-1)
-    def on_tool_selected(self, row):
-        if row >= 0:
-            tool_name = self.tool_list.item(row).text()
-            if tool_name in self.tool_pages:
-                page_index = list(self.tool_pages.keys()).index(tool_name) + 1
-                self.right_stack.setCurrentIndex(page_index)
+        main_layout.setSpacing(0)
+        
+        self.floating_toolbar = FloatingToolBar()
+        main_layout.addWidget(self.floating_toolbar)
+        
+
+        self.create_promotion_widget()
+        
+
+        self.main_tabs = QTabWidget()
+        
+
+        tool_widget = QWidget()
+        tool_layout = QVBoxLayout(tool_widget)
+        tool_layout.setContentsMargins(0, 0, 0, 0)
+        
+        content_splitter = QSplitter(Qt.Horizontal)
+        content_splitter.setChildrenCollapsible(False)
+        
+        self.tool_operation = ToolOperationWidget()
+        self.terminal_area = TerminalArea()
+        
+        content_splitter.addWidget(self.tool_operation)
+        content_splitter.addWidget(self.terminal_area)
+        content_splitter.setSizes([400, 800])
+        
+        tool_layout.addWidget(content_splitter)
+        self.main_tabs.addTab(tool_widget, "工具操作")
+        
+
+
+
+        
+
+        
+
+        self.virtual_env_widget = VirtualEnvWidget(theme_manager=self.theme_manager)
+        self.main_tabs.addTab(self.virtual_env_widget, "虚拟环境")
+        
+
+        self.system_env_widget = SystemEnvWidget(theme_manager=self.theme_manager)
+        self.main_tabs.addTab(self.system_env_widget, "系统环境")
+        
+
+        
+
+        self.font_scale_widget = FontScaleWidget(self.config_manager)
+        self.main_tabs.addTab(self.font_scale_widget, "字体缩放")
+        
+
+        if self.should_show_promotion():
+            main_layout.addWidget(self.promotion_widget)
+            self.main_tabs.hide()
+            self.promotion_shown = True
         else:
-            self.right_stack.setCurrentIndex(0)
-    def on_item_clicked(self, item):
-        tool_name = item.text()
-        self.set_tool_list_item_alert(tool_name, alert=False)
-    def clear_selection(self):
-        self.tool_list.clearSelection()
-        self.tool_list.setCurrentRow(-1)
-        self.right_stack.setCurrentIndex(0)
-    def show_tool_list_context_menu(self, position):
-        menu = QMenu(self)
-        menu.setFont(QFont(fonts["system"], s(10)))
-        menu.setStyleSheet("""
-            QMenu {
-                background-color: #ffffff;
-                border: 1px solid #e9ecef;
-                border-radius: 8px;
-                padding: 4px;
-            }
-            QMenu::item {
-                background-color: transparent;
-                padding: 8px 16px;
-                border-radius: 4px;
-                color: #495057;
-            }
-            QMenu::item:selected {
-                background-color: #4a90e2;
-                color: white;
-            }
-        """)
-        show_ads_action = menu.addAction(t("home_menu"))
-        show_ads_action.triggered.connect(self.clear_selection)
-        menu.addSeparator()
-        backup_action = menu.addAction(t("backup_config"))
-        backup_action.triggered.connect(self.backup_config)
-        restore_action = menu.addAction(t("restore_config"))
-        restore_action.triggered.connect(self.restore_config)
-        menu.addSeparator()
-        update_action = menu.addAction(t("update_menu"))
-        update_action.triggered.connect(self.check_for_updates)
-        current_item = self.tool_list.currentItem()
-        if current_item:
-            menu.addSeparator()
-            open_folder_action = menu.addAction(f"{t('open_folder')} {current_item.text()} {t('folder_text')}")
-            open_folder_action.triggered.connect(lambda: self.open_tool_folder(current_item.text()))
-        menu.exec(self.tool_list.mapToGlobal(position))
-    def on_scale_changed(self, text):
+            main_layout.addWidget(self.main_tabs)
+            self.promotion_shown = False
+        
+        self.floating_toolbar.tool_selected.connect(self.on_tool_selected)
+        self.floating_toolbar.promotion_requested.connect(self.show_promotion_widget)
+        
+
+        self.status_bar = QStatusBar()
+        self.setStatusBar(self.status_bar)
+        
+        self.status_bar.showMessage("就绪")
+        
+    def setup_connections(self):
+
+        self.tool_operation.tool_execution_requested.connect(self.execute_tool)
+        
+
+        self.terminal_area.tool_execution_started.connect(self.on_tool_execution_started)
+        self.terminal_area.tool_execution_finished.connect(self.on_tool_execution_finished)
+            
+        if self.virtual_env_widget:
+            self.virtual_env_widget.environment_activated.connect(self.on_virtual_env_activated)
+            
+        if self.system_env_widget:
+            self.system_env_widget.environment_changed.connect(self.on_system_env_changed)
+            
+
+        
+
+        self.connect_update_manager()
+        
+    def load_tools(self):
         try:
-            scale_factor = float(text.replace('%', '')) / 100.0
-            utils.save_scale_factor(scale_factor)
-            if hasattr(self, 'scale_btn'):
-                self.scale_btn.setText(f"⚡ {text}")
-            msg_box = QMessageBox()
-            msg_box.setIcon(QMessageBox.Information)
-            msg_box.setText(t("scale_changed"))
-            msg_box.setInformativeText(t("scale_restart"))
-            msg_box.setWindowTitle(t("tip"))
-            msg_box.setStandardButtons(QMessageBox.Ok)
-            msg_box.exec()
-        except ValueError:
+            tools_dir = os.path.join(os.path.dirname(os.path.dirname(__file__)), "tools")
+            self.tool_scanner.scan_tools(tools_dir)
+            
+
+            if hasattr(self, 'floating_toolbar'):
+                self.floating_toolbar.update_tools(self.tool_scanner.get_all_tools(), self.tool_scanner)
+                
+            self.status_bar.showMessage(f"已加载 {len(self.tool_scanner.get_all_tools())} 个工具")
+            
+        except Exception as e:
+            QMessageBox.warning(self, "警告", f"加载工具时出错: {str(e)}")
+            
+    def execute_tool(self, tool_info, parameters):
+        try:
+            self.terminal_area.execute_tool(tool_info, parameters)
+        except Exception as e:
+            QMessageBox.critical(self, "错误", f"执行工具时出错: {str(e)}")
+            
+    def on_tool_execution_started(self, tool_name):
+        self.status_bar.showMessage(f"正在执行: {tool_name}")
+        
+    def on_tool_execution_finished(self, tool_name, success):
+        status = "成功" if success else "失败"
+        self.status_bar.showMessage(f"工具 {tool_name} 执行{status}")
+        
+
+        if self.notification_manager and success:
+
+            process_id = None
+            tab_id = None
+            if hasattr(self.terminal_area, 'tool_processes'):
+                process_id = self.terminal_area.tool_processes.get(tool_name)
+                tab_id = process_id
+            
+            if process_id:
+                self.notification_manager.process_completed(tool_name, process_id, tab_id)
+        
+        QTimer.singleShot(3000, lambda: self.status_bar.showMessage("就绪"))
+        
+    def on_tool_selected(self, tool_name):
+
+        if self.promotion_shown:
+            self.close_promotion_widget()
+            
+        tool_info = self.tool_scanner.get_tool_info(tool_name)
+        if tool_info:
+            self.tool_operation.load_tool(tool_info)
+
+            self.terminal_area.filter_tabs_by_tool(tool_name)
+
+            self.current_selected_tool = tool_name
+        
+    def get_terminal_area(self):
+        return self.terminal_area
+             
+    def show_advanced_search(self):
+        if not self.advanced_search_dialog:
+            self.advanced_search_dialog = AdvancedSearchDialog(self)
+        self.advanced_search_dialog.show()
+        
+    def activate_virtual_env(self):
+        self.main_tabs.setCurrentWidget(self.virtual_env_widget)
+        
+    def refresh_system_env(self):
+        if self.system_env_widget:
+            self.system_env_widget.load_variables()
+            
+    def show_about(self):
+        QMessageBox.about(self, "关于", 
+                         "White Cat Toolbox v3.0\n\n"
+                         "一个强大的渗透测试工具集成平台\n\n"
+                         "Phase 3 功能包括:\n"
+                         "- 模板管理系统\n"
+                         "- 搜索功能系统\n"
+                         "- 虚拟环境管理\n"
+                         "- 系统环境管理")
+                         
+    def perform_search(self, query, search_options):
+
+        data_sources = {
+            'tools': self.tool_scanner.get_all_tools(),
+            'parameters': self.get_tool_parameters(),
+            'outputs': self.get_terminal_outputs()
+        }
+        
+        if self.search_widget:
+            self.search_widget.perform_search(query, search_options, data_sources)
+            
+    def on_search_result_selected(self, result):
+
+        if result.type == 'tool':
+            tool_info = result.metadata.get('tool_info')
+            if tool_info:
+                self.main_tabs.setCurrentIndex(0)
+                self.tool_operation.load_tool(tool_info)
+        elif result.type == 'parameter':
+            tool_name = result.metadata.get('tool_name')
+            param_name = result.metadata.get('param_name')
+            if tool_name and param_name:
+                tool_info = self.tool_scanner.get_tool_info(tool_name)
+                if tool_info:
+                    self.main_tabs.setCurrentIndex(0)
+                    self.tool_operation.load_tool(tool_info)
+                    self.tool_operation.focus_parameter(param_name)
+        elif result.type == 'output':
+
+            self.terminal_area.show_output_content(result.metadata.get('full_content', ''))
+            
+        self.status_bar.showMessage(f"已选择搜索结果: {result.title}")
+        
+    def on_virtual_env_activated(self, env_path, env_vars):
+
+        self.terminal_area.set_environment_variables(env_vars)
+        self.status_bar.showMessage(f"已激活虚拟环境: {env_path}")
+        
+    def on_system_env_changed(self):
+
+        self.status_bar.showMessage("系统环境变量已更新")
+        
+    def get_tool_parameters(self):
+
+        parameters = {}
+        for tool_info in self.tool_scanner.get_all_tools():
+            if hasattr(tool_info, 'parameters'):
+                parameters[tool_info.name] = tool_info.parameters
+        return parameters
+        
+    def get_terminal_outputs(self):
+
+        if hasattr(self.terminal_area, 'get_output_history'):
+            return self.terminal_area.get_output_history()
+        return []
+        
+
+                
+
+    
+
+    
+
+    def connect_update_manager(self):
+        """连接更新管理器信号"""
+        try:
+
+            self.update_manager.update_available.connect(self.on_update_available)
+            self.update_manager.update_check_failed.connect(self.on_update_check_failed)
+            
+
+            self.update_manager.start_auto_check()
+        except Exception as e:
+            print(f'连接更新管理器信号失败: {e}')
+    
+    def on_update_available(self, version_info):
+        """有更新可用时的处理"""
+        try:
+
             pass
-    def open_tool_folder(self, tool_name):
-        try:
-            tool_path = os.path.join("tools", tool_name)
-            if os.path.exists(tool_path):
-                abs_tool_path = os.path.abspath(tool_path)
-                if platform.system() == "Windows":
-                    result = subprocess.run(["explorer", abs_tool_path], capture_output=True)
-                elif platform.system() == "Darwin":
-                    result = subprocess.run(["open", abs_tool_path], capture_output=True)
-                    if result.returncode != 0:
-                        raise subprocess.CalledProcessError(result.returncode, "open")
-                else:
-                    result = subprocess.run(["xdg-open", abs_tool_path], capture_output=True)
-                    if result.returncode != 0:
-                        raise subprocess.CalledProcessError(result.returncode, "xdg-open")
-            else:
-                self.show_error_message(t("folder_not_exist"), f"{t('tool_folder_not_exist')}\n{tool_path}")
-        except subprocess.CalledProcessError:
-            self.show_error_message(t("open_failed"), f"{t('cannot_open_folder')}\n{tool_path}")
         except Exception as e:
-            self.show_error_message(t("open_failed"), f"{t('open_error')}\n{str(e)}")
-    def backup_config(self):
+            print(f'处理更新通知失败: {e}')
+    
+    def on_update_check_failed(self, error_msg):
+        """更新检查失败时的处理"""
         try:
-            timestamp = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
-            default_filename = f"{t('backup_filename')}_{timestamp}.zip"
-            file_path, _ = QFileDialog.getSaveFileName(
-                self,
-                t("backup_config_title"),
-                default_filename,
-                t("zip_files")
-            )
-            if not file_path:
-                return
-            with zipfile.ZipFile(file_path, 'w', zipfile.ZIP_DEFLATED) as backup_zip:
-                templates_dir = "templates"
-                if os.path.exists(templates_dir):
-                    for root, dirs, files in os.walk(templates_dir):
-                        for file in files:
-                            file_path_full = os.path.join(root, file)
-                            arcname = os.path.relpath(file_path_full, ".")
-                            backup_zip.write(file_path_full, arcname)
-                promotion_dir = "promotion"
-                if os.path.exists(promotion_dir):
-                    for root, dirs, files in os.walk(promotion_dir):
-                        for file in files:
-                            file_path_full = os.path.join(root, file)
-                            arcname = os.path.relpath(file_path_full, ".")
-                            backup_zip.write(file_path_full, arcname)
-                if os.path.exists("promotion_config.json"):
-                    backup_zip.write("promotion_config.json", "promotion_config.json")
-                if os.path.exists("config/app_config.json"):
-                    backup_zip.write("config/app_config.json", "config/app_config.json")
-                tools_dir = "tools"
-                if os.path.exists(tools_dir):
-                    for tool_name in os.listdir(tools_dir):
-                        tool_path = os.path.join(tools_dir, tool_name)
-                        if os.path.isdir(tool_path):
-                            config_file = os.path.join(tool_path, "wct_config.txt")
-                            if os.path.exists(config_file):
-                                arcname = os.path.relpath(config_file, ".")
-                                backup_zip.write(config_file, arcname)
-                            custom_cmd_file = os.path.join(tool_path, "custom_command.txt")
-                            if os.path.exists(custom_cmd_file):
-                                arcname = os.path.relpath(custom_cmd_file, ".")
-                                backup_zip.write(custom_cmd_file, arcname)
-                config_dir = "config"
-                if os.path.exists(config_dir):
-                    for root, dirs, files in os.walk(config_dir):
-                        for file in files:
-                            file_path_full = os.path.join(root, file)
-                            arcname = os.path.relpath(file_path_full, ".")
-                            backup_zip.write(file_path_full, arcname)
-                backup_info = {
-                    "backup_time": datetime.datetime.now().isoformat(),
-                    "version": "v0.0.6",
-                    "description": t("backup_description"),
-                    "includes": [
-                        "templates/",
-                        "promotion/",
-                        "promotion_config.json",
-                        "config/",
-                        "tools/*/wct_config.txt",
-                        "tools/*/custom_command.txt"
-                    ]
-                }
-                backup_zip.writestr("backup_info.json", json.dumps(backup_info, ensure_ascii=False, indent=2))
-            self.show_success_message(t("backup_success"), f"{t('backup_success_text')}\n{file_path}")
+            print(f'更新检查失败: {error_msg}')
         except Exception as e:
-            self.show_error_message(t("backup_failed"), f"{t('backup_error')}\n{str(e)}")
-    def restore_config(self):
-        try:
-            file_path, _ = QFileDialog.getOpenFileName(
-                self,
-                t("select_backup_file"),
-                "",
-                t("zip_files")
-            )
-            if not file_path:
-                return
-            try:
-                with zipfile.ZipFile(file_path, 'r') as backup_zip:
-                    file_list = backup_zip.namelist()
-                    if "backup_info.json" in file_list:
-                        backup_info_data = backup_zip.read("backup_info.json")
-                        backup_info = json.loads(backup_info_data.decode('utf-8'))
-                        info_text = f"{t('backup_time')}: {backup_info.get('backup_time', t('unknown'))}\n"
-                        info_text += f"{t('version')}: {backup_info.get('version', t('unknown'))}\n"
-                        info_text += f"{t('description')}: {backup_info.get('description', t('none'))}\n\n"
-                        info_text += f"{t('includes')}:\n"
-                        for item in backup_info.get('includes', []):
-                            info_text += f"- {item}\n"
-                        reply = QMessageBox.question(
-                            self,
-                            t("confirm_restore"),
-                            t("restore_question").format(info=info_text),
-                            QMessageBox.Yes | QMessageBox.No,
-                            QMessageBox.No
-                        )
-                        if reply != QMessageBox.Yes:
-                            return
-                    else:
-                        reply = QMessageBox.question(
-                            self,
-                            t("confirm_restore"), 
-                            t("invalid_backup"),
-                            QMessageBox.Yes | QMessageBox.No,
-                            QMessageBox.No
-                        )
-                        if reply != QMessageBox.Yes:
-                            return
-            except zipfile.BadZipFile:
-                self.show_error_message(t("file_error"), t("invalid_zip"))
-                return
-            with zipfile.ZipFile(file_path, 'r') as backup_zip:
-                extracted_files = []
-                backup_files = []
-                for file_info in backup_zip.infolist():
-                    if file_info.is_dir() or file_info.filename == "backup_info.json":
-                        continue
-                    target_path = file_info.filename
-                    target_dir = os.path.dirname(target_path)
-                    if target_dir and not os.path.exists(target_dir):
-                        os.makedirs(target_dir, exist_ok=True)
-                    if os.path.exists(target_path):
-                        backup_timestamp = datetime.datetime.now().strftime('%Y%m%d_%H%M%S')
-                        backup_path = f"{target_path}.restore_backup_{backup_timestamp}"
-                        shutil.copy2(target_path, backup_path)
-                        backup_files.append(backup_path)
-                    backup_zip.extract(file_info, ".")
-                    extracted_files.append(target_path)
-                restore_text_lines = t('restore_success_text').split('\n')
-                success_text = f"{restore_text_lines[0]}\n\n"
-                success_text += f"✅ {restore_text_lines[1].split(' ')[1]} {len(extracted_files)} {t('files_text')}:\n"
-                for file in extracted_files[:8]:  
-                    success_text += f"- {file}\n"
-                if len(extracted_files) > 8:
-                    success_text += f"{t('and_others')} {len(extracted_files) - 8} {t('files_text')}\n"
-                if backup_files:
-                    success_text += f"\n{t('backup_original')} {len(backup_files)} {t('original_files')}\n"
-                    for backup_file in backup_files[:5]:  
-                        original_name = backup_file.split('.restore_backup_')[0]
-                        success_text += f"- {original_name} → {os.path.basename(backup_file)}\n"
-                    if len(backup_files) > 5:
-                        success_text += f"{t('and_others')} {len(backup_files) - 5} {t('backup_files')}\n"
-                self.show_success_message(t("restore_success"), success_text)
-        except Exception as e:
-            self.show_error_message(t("restore_failed"), f"{t('restore_error')}\n{str(e)}")
-    def show_success_message(self, title, message):
-        msg_box = QMessageBox(self)
-        msg_box.setIcon(QMessageBox.Information)
-        msg_box.setWindowTitle(title)
-        msg_box.setText(message)
-        msg_box.exec()
-    def show_error_message(self, title, message):
-        msg_box = QMessageBox(self)
-        msg_box.setIcon(QMessageBox.Critical)
-        msg_box.setWindowTitle(title)
-        msg_box.setText(message)
-        msg_box.exec()
-    def switch_language(self):
-        current_lang = get_current_language()
-        new_lang = "en_US" if current_lang == "zh_CN" else "zh_CN"
-        try:
-            set_language(new_lang)
-            config_path = os.path.join(os.path.dirname(__file__), "..", "config", "app_config.json")
-            config = {}
-            if os.path.exists(config_path):
-                try:
-                    with open(config_path, 'r', encoding='utf-8') as f:
-                        config = json.load(f)
-                except:
-                    pass
-            if "ui_settings" not in config:
-                config["ui_settings"] = {}
-            config["ui_settings"]["language"] = new_lang
-            os.makedirs(os.path.dirname(config_path), exist_ok=True)
-            with open(config_path, 'w', encoding='utf-8') as f:
-                json.dump(config, f, indent=4, ensure_ascii=False)
-            QMessageBox.information(
-                self,
-                t("tip"),
-                f"{t('language_changed')}\n\n{t('language_restart')}"
-            )
-        except Exception as e:
-            QMessageBox.warning(
-                self,
-                t("error"),
-                f"Language switch failed: {str(e)}"
-            )
-    def set_tool_list_item_alert(self, tool_name, alert=True):
-        for i in range(self.tool_list.count()):
-            item = self.tool_list.item(i)
-            if item.text() == tool_name:
-                if alert:
-                    item.setBackground(QBrush(QColor('#ffe066')))
-                    item.setIcon(QIcon.fromTheme('dialog-warning'))
-                else:
-                    item.setBackground(QBrush())
-                    item.setIcon(QIcon())
-                break
-    def clear_all_tool_list_alerts(self):
-        for i in range(self.tool_list.count()):
-            item = self.tool_list.item(i)
-            item.setBackground(QBrush())
-            item.setIcon(QIcon())
-    def has_tool_list_alerts(self):
-        for i in range(self.tool_list.count()):
-            item = self.tool_list.item(i)
-            if not item.icon().isNull():
-                return True
-        return False
+            print(f'处理更新检查失败通知失败: {e}')
+    
     def check_for_updates(self):
-        if self.update_manager:
-            self.update_manager.check_for_updates(show_no_update_message=True)
+        """手动检查更新"""
+        try:
+            self.update_manager.check_for_updates()
+        except Exception as e:
+            print(f'手动检查更新失败: {e}')
+    
+
+    def new_terminal_tab(self):
+        """新建终端标签页"""
+        try:
+            self.terminal_area.add_terminal_tab()
+            self.status_bar.showMessage("已创建新的终端标签页")
+        except Exception as e:
+            print(f'创建新终端标签页失败: {e}')
+    
+    def clear_all_terminals(self):
+        """清空所有终端"""
+        try:
+            self.terminal_area.clear_all_terminals()
+            self.status_bar.showMessage("已清空所有终端输出")
+        except Exception as e:
+            print(f'清空所有终端失败: {e}')
+    
+    def stop_all_processes(self):
+        """停止所有进程"""
+        try:
+            self.terminal_area.stop_all_processes()
+            self.status_bar.showMessage("已停止所有运行中的进程")
+        except Exception as e:
+            print(f'停止所有进程失败: {e}')
+    
+    def toggle_new_tab_mode(self):
+        """切换新标签页运行模式"""
+        try:
+            if hasattr(self.terminal_area, 'run_in_new_tab_checkbox'):
+                current_state = self.terminal_area.run_in_new_tab_checkbox.isChecked()
+                self.terminal_area.run_in_new_tab_checkbox.setChecked(not current_state)
+                mode = "新标签页" if not current_state else "当前标签页"
+                self.status_bar.showMessage(f"命令执行模式已切换为: {mode}")
+        except Exception as e:
+            print(f'切换新标签页模式失败: {e}')
+    
+
+    def set_theme(self, theme_name):
+        """设置主题"""
+        try:
+            self.theme_manager.set_theme(theme_name)
+            self.status_bar.showMessage(f"已切换到{theme_name}主题")
+        except Exception as e:
+            print(f'切换主题失败: {e}')
+            QMessageBox.warning(self, "警告", f"切换主题时出错: {str(e)}")
+    
+    def show_font_scale_settings(self):
+        """显示字体缩放设置标签页"""
+        try:
+
+            for i in range(self.main_tabs.count()):
+                if self.main_tabs.tabText(i) == "字体缩放":
+                    self.main_tabs.setCurrentIndex(i)
+                    break
+        except Exception as e:
+            print(f'显示字体缩放设置失败: {e}')
+    
+    def apply_initial_theme_and_font(self):
+        """应用初始主题和字体设置"""
+        try:
+
+            self.theme_manager.load_theme_from_config()
+            
+
+            self.font_scale_manager.initialize()
+        except Exception as e:
+            print(f'应用初始主题和字体设置失败: {e}')
+    
+    def closeEvent(self, event):
+        """应用关闭事件"""
+        try:
+
+            if hasattr(self, 'notification_manager') and self.notification_manager:
+                self.notification_manager.cleanup()
+                
+
+            self.config_manager.save_app_config()
+            
+
+            if hasattr(self, 'terminal_area'):
+                self.terminal_area.stop_all_processes()
+            
+
+            if hasattr(self, 'update_manager'):
+                self.update_manager.stop_auto_check()
+                
+        except Exception as e:
+            print(f"关闭应用时出错: {e}")
+        
+        event.accept()
+
+    def create_promotion_widget(self):
+        """创建推广界面组件"""
+        self.promotion_widget = PromotionWidget(self.config_manager, self)
+        self.promotion_widget.promotion_closed.connect(self.on_promotion_closed)
+        
+    def should_show_promotion(self):
+        """判断是否应该显示推广界面"""
+
+        try:
+            return self.config_manager.app_config.get('show_promotion_on_startup', True)
+        except:
+            return True
+            
+    def on_promotion_closed(self):
+        """推广界面关闭事件处理"""
+        self.close_promotion_widget()
+        
+    def close_promotion_widget(self):
+        """关闭推广界面，显示主界面"""
+        if self.promotion_shown and self.promotion_widget:
+
+            if self.promotion_widget.parent():
+                self.promotion_widget.setParent(None)
+            self.promotion_widget.hide()
+            
+
+            if not self.main_tabs.parent():
+                self.centralWidget().layout().addWidget(self.main_tabs)
+            self.main_tabs.show()
+            
+            self.promotion_shown = False
+            
+
+
+                
+    def show_promotion_widget(self):
+        """显示推广界面"""
+        if not self.promotion_shown:
+
+            if self.main_tabs.parent():
+                self.main_tabs.setParent(None)
+            self.main_tabs.hide()
+            
+
+            if not self.promotion_widget.parent():
+                self.centralWidget().layout().addWidget(self.promotion_widget)
+            self.promotion_widget.show()
+            
+            self.promotion_shown = True
+            
+
+            try:
+                self.config_manager.app_config['show_promotion_on_startup'] = True
+                self.config_manager.save_app_config()
+            except Exception as e:
+                print(f"保存配置失败: {e}")

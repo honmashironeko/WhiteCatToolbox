@@ -1,11 +1,7 @@
 {
   "ui_settings": {
-    "scale_factor": 1.25,
-    "theme": "default",
-    "language": "zh_CN"
+    "font_scale": 1,
+    "theme": "blue_white"
   },
-  "system_settings": {
-    "enable_isatty_fix": true,
-    "isatty_fix_mode": "auto"
-  }
+  "show_promotion_on_startup": true
 }
