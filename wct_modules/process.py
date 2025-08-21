@@ -163,10 +163,26 @@ class ProcessManager(QObject):
             print(f"Fallback进程创建失败: {e}")
             return None
     
-    def _start_output_monitoring_old(self, process_id, process):
+    def _start_output_monitoring(self, process_id, process):
         def monitor_output():
             try:
-                if hasattr(process, 'read_output'):
+                if hasattr(process, 'stdout') and process.stdout:
+                    while process.poll() is None:
+                        try:
+                            line = process.stdout.readline()
+                            if line:
+                                self.output_received.emit(process_id, line.rstrip())
+                        except Exception as e:
+                            print(f"读取输出失败: {e}")
+                            break
+                    
+                    try:
+                        remaining = process.stdout.read()
+                        if remaining:
+                            self.output_received.emit(process_id, remaining.rstrip())
+                    except Exception:
+                        pass
+                elif hasattr(process, 'read_output'):
                     while process.poll() is None:
                         try:
                             output = process.read_output(1024)
@@ -174,12 +190,6 @@ class ProcessManager(QObject):
                                 self.output_received.emit(process_id, output)
                         except Exception as e:
                             print(f"读取输出失败: {e}")
-                            break
-                else:
-                    for line in iter(process.stdout.readline, ''):
-                        if line:
-                            self.output_received.emit(process_id, line)
-                        if process.poll() is not None:
                             break
                             
                 exit_code = process.wait()
@@ -356,42 +366,7 @@ class PtyProcess:
         
         return FallbackProcess(process)
         
-    def _start_output_monitoring(self, process_id, process):
-        def monitor_output():
-            try:
-                import sys
-                
-                if hasattr(process, 'stdout') and process.stdout:
-                    while process.poll() is None:
-                        try:
-                            line = process.stdout.readline()
-                            if line:
-                                self.output_received.emit(process_id, line.rstrip())
-                        except Exception as e:
-                            print(f"读取输出失败: {e}")
-                            break
-                    
-                    try:
-                        remaining = process.stdout.read()
-                        if remaining:
-                            self.output_received.emit(process_id, remaining.rstrip())
-                    except Exception:
-                        pass
-                        
-                exit_code = process.wait()
-                self.process_finished.emit(process_id, exit_code)
-                
-            except Exception as e:
-                self.error_occurred.emit(process_id, f"输出监控错误: {str(e)}")
-            finally:
-                if process_id in self.processes:
-                    del self.processes[process_id]
-                if process_id in self.output_threads:
-                    del self.output_threads[process_id]
-                
-        thread = threading.Thread(target=monitor_output, daemon=True)
-        thread.start()
-        self.output_threads[process_id] = thread
+
         
     def send_input(self, process_id, text):
         if process_id in self.processes:
