@@ -3631,7 +3631,8 @@ class ToolOperationWidget(QWidget):
             import json
             
 
-            config_dir = Path(__file__).parent.parent / 'config'
+            from .utils import get_resource_path
+            config_dir = get_resource_path('config')
             app_config_file = config_dir / 'app_config.json'
             
 
@@ -3730,7 +3731,8 @@ class ToolOperationWidget(QWidget):
             from pathlib import Path
             import json
             
-            config_dir = Path(__file__).parent.parent / 'config'
+            from .utils import get_resource_path
+            config_dir = get_resource_path('config')
             app_config_file = config_dir / 'app_config.json'
             
             if app_config_file.exists():

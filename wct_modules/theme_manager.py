@@ -439,10 +439,8 @@ class ThemeManager(QObject):
     
     def get_theme_css_file(self):
         """获取当前主题的CSS文件路径"""
-        from pathlib import Path
-        app_dir = Path(__file__).parent.parent
-        theme_dir = app_dir / "assets" / "themes"
-        theme_file = theme_dir / f"{self.current_theme}.css"
+        from .utils import get_resource_path
+        theme_file = get_resource_path(f"assets/themes/{self.current_theme}.css")
         return theme_file
     
     def get_theme_color(self, color_name):

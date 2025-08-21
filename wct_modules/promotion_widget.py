@@ -1073,7 +1073,8 @@ White Cat Toolbox 是一个功能强大的安全工具集合平台，旨在为�
     
     def load_promotion_content(self):
         """加载推广内容"""
-        promotion_dir = os.path.join(os.path.dirname(os.path.dirname(__file__)), "promotion")
+        from .utils import get_resource_path
+        promotion_dir = get_resource_path("promotion")
         
 
         self.load_projects(promotion_dir)
@@ -1086,7 +1087,8 @@ White Cat Toolbox 是一个功能强大的安全工具集合平台，旨在为�
     
     def load_projects(self, promotion_dir):
         """加载项目推荐"""
-        xm_file = os.path.join(promotion_dir, "xm.txt")
+        from pathlib import Path
+        xm_file = Path(promotion_dir) / "xm.txt"
         
 
         for i in reversed(range(self.project_layout.count())):
@@ -1094,7 +1096,7 @@ White Cat Toolbox 是一个功能强大的安全工具集合平台，旨在为�
             if child:
                 child.setParent(None)
         
-        if os.path.exists(xm_file):
+        if xm_file.exists():
             try:
                 with open(xm_file, 'r', encoding='utf-8') as f:
                     content = f.read().strip()
@@ -1126,7 +1128,8 @@ White Cat Toolbox 是一个功能强大的安全工具集合平台，旨在为�
     
     def load_advertisers(self, promotion_dir):
         """加载赞助企业"""
-        gg_file = os.path.join(promotion_dir, "gg.txt")
+        from pathlib import Path
+        gg_file = Path(promotion_dir) / "gg.txt"
         
 
         for i in reversed(range(self.advertiser_layout.count())):
@@ -1134,7 +1137,7 @@ White Cat Toolbox 是一个功能强大的安全工具集合平台，旨在为�
             if child:
                 child.setParent(None)
         
-        if os.path.exists(gg_file):
+        if gg_file.exists():
             try:
                 with open(gg_file, 'r', encoding='utf-8') as f:
                     content = f.read().strip()
@@ -1166,7 +1169,8 @@ White Cat Toolbox 是一个功能强大的安全工具集合平台，旨在为�
     
     def load_sponsors(self, promotion_dir):
         """加载赞助榜单"""
-        zz_file = os.path.join(promotion_dir, "zz.txt")
+        from pathlib import Path
+        zz_file = Path(promotion_dir) / "zz.txt"
         
 
         for i in reversed(range(self.ranking_layout.count())):
@@ -1179,7 +1183,7 @@ White Cat Toolbox 是一个功能强大的安全工具集合平台，旨在为�
             if child:
                 child.setParent(None)
         
-        if os.path.exists(zz_file):
+        if zz_file.exists():
             try:
                 with open(zz_file, 'r', encoding='utf-8') as f:
                     content = f.read().strip()
