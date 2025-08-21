@@ -1361,29 +1361,72 @@ class TerminalArea(QWidget):
         
     def build_tool_command(self, tool_info, parameters):
         """构建工具执行命令"""
+        import sys
         from .utils import get_system_python_executable
         
         executable = getattr(tool_info, 'executable', 'python') or 'python'
         script_path = getattr(tool_info, 'script_path', None)
         
-
-        if executable.endswith('.exe') or executable == script_path:
-
-            command_parts = [f'./{executable}']
-        else:
-
-            if not script_path:
-                script_path = 'main.py'
+        configured_interpreter = None
+        configured_program = None
+        
+        if hasattr(tool_info, 'config_data') and tool_info.config_data:
+            configured_interpreter = tool_info.config_data.get('interpreter_path', '').strip()
+            configured_program = tool_info.config_data.get('program_path', '').strip()
+            interpreter_type = tool_info.config_data.get('interpreter_type', 'python')
             
-
-            if os.path.isabs(script_path) and hasattr(tool_info, 'path'):
-                script_path = os.path.relpath(script_path, tool_info.path)
-            
-            if executable == 'python' or executable == 'python3':
-                system_python = get_system_python_executable()
-                command_parts = [system_python, script_path]
+            if configured_interpreter and configured_program:
+                if interpreter_type == 'python':
+                    command_parts = [f'"{configured_interpreter}"', configured_program]
+                elif interpreter_type == 'java':
+                    command_parts = [f'"{configured_interpreter}"', '-jar', configured_program]
+                else:
+                    command_parts = [f'"{configured_interpreter}"', configured_program]
+            elif configured_program and not configured_interpreter:
+                if configured_program.endswith('.exe'):
+                    command_parts = [f'./{configured_program}']
+                else:
+                    if getattr(sys, 'frozen', False):
+                        system_python = sys.executable
+                    else:
+                        system_python = get_system_python_executable()
+                    command_parts = [f'"{system_python}"', configured_program]
             else:
-                command_parts = [executable, script_path]
+                if executable.endswith('.exe') or executable == script_path:
+                    command_parts = [f'./{executable}']
+                else:
+                    if not script_path:
+                        script_path = 'main.py'
+                    
+                    if os.path.isabs(script_path) and hasattr(tool_info, 'path'):
+                        script_path = os.path.relpath(script_path, tool_info.path)
+                    
+                    if executable == 'python' or executable == 'python3':
+                        if getattr(sys, 'frozen', False):
+                            system_python = sys.executable
+                        else:
+                            system_python = get_system_python_executable()
+                        command_parts = [f'"{system_python}"', script_path]
+                    else:
+                        command_parts = [executable, script_path]
+        else:
+            if executable.endswith('.exe') or executable == script_path:
+                command_parts = [f'./{executable}']
+            else:
+                if not script_path:
+                    script_path = 'main.py'
+                
+                if os.path.isabs(script_path) and hasattr(tool_info, 'path'):
+                    script_path = os.path.relpath(script_path, tool_info.path)
+                
+                if executable == 'python' or executable == 'python3':
+                    if getattr(sys, 'frozen', False):
+                        system_python = sys.executable
+                    else:
+                        system_python = get_system_python_executable()
+                    command_parts = [f'"{system_python}"', script_path]
+                else:
+                    command_parts = [executable, script_path]
         
 
         for param_name, param_value in parameters.items():

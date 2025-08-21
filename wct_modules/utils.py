@@ -100,15 +100,7 @@ def get_python_executable():
 
 def get_system_python_executable():
     if getattr(sys, 'frozen', False):
-        best_python = get_best_python_interpreter()
-        if best_python != get_python_executable():
-            return best_python
-        
-        interpreters = detect_available_python_interpreters()
-        if interpreters:
-            return interpreters[0]['path']
-        
-        return get_python_executable()
+        return sys.executable
     else:
         return get_python_executable()
 
@@ -189,11 +181,13 @@ def get_cache_dir():
 def validate_python_path(python_path):
     try:
         import subprocess
+        startupinfo = create_startup_info()
         result = subprocess.run(
             [python_path, "--version"], 
             capture_output=True, 
             text=True, 
-            timeout=5
+            timeout=5,
+            startupinfo=startupinfo
         )
         return result.returncode == 0
     except Exception:
@@ -262,11 +256,13 @@ def get_best_python_interpreter():
 def get_python_version(python_path):
     try:
         import subprocess
+        startupinfo = create_startup_info()
         result = subprocess.run(
             [python_path, "--version"], 
             capture_output=True, 
             text=True, 
-            timeout=5
+            timeout=5,
+            startupinfo=startupinfo
         )
         if result.returncode == 0:
             return result.stdout.strip()
