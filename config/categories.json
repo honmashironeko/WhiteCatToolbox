@@ -1,0 +1,10 @@
+{
+  "custom_categories": {
+    "未分类": {
+      "display_name": "未分类",
+      "description": "未归类的工具",
+      "icon": "📦"
+    }
+  },
+  "tool_category_mapping": {}
+}

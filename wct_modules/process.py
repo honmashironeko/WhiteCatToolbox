@@ -57,11 +57,9 @@ class ProcessManager(QObject):
         try:
             import winpty
             
-
             if not command_parts or not isinstance(command_parts, list):
                 raise ValueError("Invalid command_parts")
                 
-
             command_str = ' '.join(f'"{part}"' if ' ' in str(part) else str(part) for part in command_parts)
             
             pty_process = winpty.PtyProcess.spawn(
@@ -70,38 +68,14 @@ class ProcessManager(QObject):
                 env=os.environ.copy()
             )
             
-            class WinptyWrapper:
-                def __init__(self, pty_process):
-                    self.pty_process = pty_process
-                    
-                def read(self, size=1024):
-                    return self.pty_process.read(size)
-                    
-                def poll(self):
-                    return None if self.pty_process.isalive() else 0
-                    
-                def wait(self):
-                    self.pty_process.wait()
-                    return 0
-                    
-                def terminate(self):
-                    self.pty_process.terminate()
-                    
-                def kill(self):
-                    self.pty_process.terminate()
-                    
-                def write(self, data):
-                    self.pty_process.write(data)
-                    
-                def isalive(self):
-                    return self.pty_process.isalive()
-            
             return WinptyWrapper(pty_process)
             
         except ImportError:
+            print("winpty不可用，使用ConPTY模式")
             try:
                 return self._create_conpty_process(command_parts, working_dir)
             except Exception:
+                print("ConPTY也不可用，使用fallback模式")
                 return self._create_fallback_process(command_parts, working_dir)
         except Exception as e:
             print(f"winpty创建失败: {e}")
@@ -136,74 +110,199 @@ class ProcessManager(QObject):
             import pty
             import select
         except ImportError:
-            # Fallback if pty/select are not available
+            print("pty/select不可用，使用fallback模式")
             return self._create_fallback_process(command_parts, working_dir)
         
-        master_fd, slave_fd = pty.openpty()
-        
-        env = os.environ.copy()
-        env['TERM'] = 'xterm-256color'
-        env['FORCE_COLOR'] = '1'
-        
-        process = subprocess.Popen(
-            command_parts,
-            cwd=str(working_dir),
-            env=env,
-            stdin=slave_fd,
-            stdout=slave_fd,
-            stderr=slave_fd,
-            preexec_fn=os.setsid if not is_windows() else None
-        )
-        
-        os.close(slave_fd)
-        
-        class PtyProcess:
-            def __init__(self, process, master_fd):
-                self.process = process
-                self.master_fd = master_fd
-                self.stdin = process.stdin
-                self.stdout = master_fd
-                self.stderr = None
+        try:
+            master_fd, slave_fd = pty.openpty()
+            
+            env = os.environ.copy()
+            env['TERM'] = 'xterm-256color'
+            env['FORCE_COLOR'] = '1'
+            
+            process = subprocess.Popen(
+                command_parts,
+                cwd=str(working_dir),
+                env=env,
+                stdin=slave_fd,
+                stdout=slave_fd,
+                stderr=slave_fd,
+                preexec_fn=os.setsid
+            )
+            
+            os.close(slave_fd)
+            
+            return PtyProcess(process, master_fd)
+            
+        except Exception as e:
+            print(f"Unix PTY创建失败: {e}")
+            return self._create_fallback_process(command_parts, working_dir)
+            
+    def _create_fallback_process(self, command_parts, working_dir):
+        try:
+            env = os.environ.copy()
+            env['PYTHONUNBUFFERED'] = '1'
+            
+            startupinfo = create_startup_info() if is_windows() else None
+            
+            process = subprocess.Popen(
+                command_parts,
+                cwd=str(working_dir),
+                env=env,
+                stdin=subprocess.PIPE,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.STDOUT,
+                text=True,
+                bufsize=1,
+                startupinfo=startupinfo
+            )
+            
+            return process
+            
+        except Exception as e:
+            print(f"Fallback进程创建失败: {e}")
+            return None
+    
+    def _start_output_monitoring(self, process_id, process):
+        def monitor_output():
+            try:
+                if hasattr(process, 'read_output'):
+                    while process.poll() is None:
+                        try:
+                            output = process.read_output(1024)
+                            if output:
+                                self.output_received.emit(process_id, output)
+                        except Exception as e:
+                            print(f"读取输出失败: {e}")
+                            break
+                else:
+                    for line in iter(process.stdout.readline, ''):
+                        if line:
+                            self.output_received.emit(process_id, line)
+                        if process.poll() is not None:
+                            break
+                            
+                exit_code = process.wait()
+                self.process_finished.emit(process_id, exit_code)
                 
-            def poll(self):
-                return self.process.poll()
-                
-            def terminate(self):
-                try:
-                    if not is_windows():
-                        os.killpg(os.getpgid(self.process.pid), signal.SIGTERM)
-                    else:
-                        self.process.terminate()
-                except Exception:
-                    self.process.terminate()
-                    
-            def kill(self):
-                try:
-                    if not is_windows():
-                        os.killpg(os.getpgid(self.process.pid), signal.SIGKILL)
-                    else:
-                        self.process.kill()
-                except Exception:
-                    self.process.kill()
-                    
-            def wait(self):
-                return self.process.wait()
-                
-            def read_output(self, size=1024):
-                try:
-                    # Import select locally to handle ImportError
-                    import select
-                    if select.select([self.master_fd], [], [], 0)[0]:
-                        return os.read(self.master_fd, size).decode('utf-8', errors='ignore')
-                except (ImportError, Exception):
-                    # Fallback for systems without select or other errors
-                    try:
-                        return os.read(self.master_fd, size).decode('utf-8', errors='ignore')
-                    except Exception:
-                        pass
-                return ''
-                
-        return PtyProcess(process, master_fd)
+            except Exception as e:
+                self.error_occurred.emit(process_id, f"输出监控失败: {str(e)}")
+            finally:
+                if process_id in self.processes:
+                    del self.processes[process_id]
+                if process_id in self.output_threads:
+                    del self.output_threads[process_id]
+        
+        thread = threading.Thread(target=monitor_output, daemon=True)
+        self.output_threads[process_id] = thread
+        thread.start()
+    
+    def stop_process(self, process_id):
+        if process_id in self.processes:
+            try:
+                process = self.processes[process_id]
+                if hasattr(process, 'terminate'):
+                    process.terminate()
+                else:
+                    process.kill()
+            except Exception as e:
+                print(f"停止进程失败: {e}")
+    
+    def kill_process(self, process_id):
+        if process_id in self.processes:
+            try:
+                process = self.processes[process_id]
+                if hasattr(process, 'kill'):
+                    process.kill()
+                elif hasattr(process, 'terminate'):
+                    process.terminate()
+            except Exception as e:
+                print(f"强制终止进程失败: {e}")
+    
+    def send_input(self, process_id, text):
+        if process_id in self.processes:
+            try:
+                process = self.processes[process_id]
+                if hasattr(process, 'write'):
+                    process.write(text)
+                elif hasattr(process, 'stdin') and process.stdin:
+                    process.stdin.write(text)
+                    process.stdin.flush()
+            except Exception as e:
+                print(f"发送输入失败: {e}")
+
+class WinptyWrapper:
+    def __init__(self, pty_process):
+        self.pty_process = pty_process
+        
+    def read_output(self, size=1024):
+        try:
+            return self.pty_process.read(size)
+        except Exception:
+            return None
+            
+    def poll(self):
+        return None if self.pty_process.isalive() else 0
+        
+    def wait(self):
+        self.pty_process.wait()
+        return 0
+        
+    def terminate(self):
+        self.pty_process.terminate()
+        
+    def kill(self):
+        self.pty_process.terminate()
+        
+    def write(self, data):
+        self.pty_process.write(data)
+        
+    def isalive(self):
+        return self.pty_process.isalive()
+
+class PtyProcess:
+    def __init__(self, process, master_fd):
+        self.process = process
+        self.master_fd = master_fd
+        self.stdin = process.stdin
+        self.stdout = master_fd
+        self.stderr = None
+        
+    def poll(self):
+        return self.process.poll()
+        
+    def terminate(self):
+        try:
+            if not is_windows():
+                os.killpg(os.getpgid(self.process.pid), signal.SIGTERM)
+            else:
+                self.process.terminate()
+        except Exception:
+            self.process.terminate()
+            
+    def kill(self):
+        try:
+            if not is_windows():
+                os.killpg(os.getpgid(self.process.pid), signal.SIGKILL)
+            else:
+                self.process.kill()
+        except Exception:
+            self.process.kill()
+            
+    def wait(self):
+        return self.process.wait()
+        
+    def read_output(self, size=1024):
+        try:
+            import select
+            if select.select([self.master_fd], [], [], 0)[0]:
+                return os.read(self.master_fd, size).decode('utf-8', errors='ignore')
+        except (ImportError, Exception):
+            try:
+                return os.read(self.master_fd, size).decode('utf-8', errors='ignore')
+            except Exception:
+                return None
+        return None
         
     def _create_fallback_process(self, command_parts, working_dir):
         env = os.environ.copy()
@@ -268,7 +367,6 @@ class ProcessManager(QObject):
                                         if stdout_data:
                                             output += stdout_data
                                 except ImportError:
-                                    # Fallback without select
                                     stdout_data = self.stdout.read(size)
                                     if stdout_data:
                                         output += stdout_data
@@ -326,7 +424,6 @@ class ProcessManager(QObject):
                                                     output = output.decode('utf-8', errors='ignore')
                                                 has_output = True
                                 except ImportError:
-                                    # Fallback without select
                                     output = process.read(1024)
                                     if output:
                                         if isinstance(output, bytes):

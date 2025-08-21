@@ -2,7 +2,7 @@ import sys
 import os
 import platform
 from pathlib import Path
-from PySide6.QtGui import QFont
+from PySide6.QtGui import QFont, QFontDatabase
 from PySide6.QtCore import QStandardPaths
 
 def get_system_font():
@@ -10,24 +10,62 @@ def get_system_font():
     if system == "Windows":
         return QFont("Microsoft YaHei", 9)
     elif system == "Darwin":
-        return QFont("PingFang SC", 12)
+        fonts = ['SF Pro Display', 'PingFang SC', 'Helvetica Neue']
+        for font in fonts:
+            if QFontDatabase().hasFamily(font):
+                return QFont(font, 12)
+        return QFont("Arial", 12)
     else:
-        return QFont("Noto Sans CJK SC", 9)
+        fonts = ['Noto Sans CJK SC', 'DejaVu Sans', 'Liberation Sans', 'Arial']
+        for font in fonts:
+            if QFontDatabase().hasFamily(font):
+                return QFont(font, 9)
+        return QFont("Arial", 9)
 
 def normalize_path(path):
     return str(Path(path).resolve())
 
 def get_executable_path():
     if getattr(sys, 'frozen', False):
-        return Path(sys.executable).parent
+        if hasattr(sys, '_MEIPASS'):
+            return Path(sys._MEIPASS)
+        else:
+            return Path(sys.executable).parent
     else:
         return Path(__file__).parent.parent
 
 def get_project_root():
     if getattr(sys, 'frozen', False):
-        return Path(sys.executable).parent
+        if hasattr(sys, '_MEIPASS'):
+            base_path = Path(sys._MEIPASS)
+        else:
+            base_path = Path(sys.executable).parent
+        
+        for potential_root in [base_path, base_path.parent]:
+            if (potential_root / "tools").exists() or (potential_root / "config").exists():
+                return potential_root
+        return base_path
     else:
         return Path(__file__).parent.parent
+
+def get_resource_path(relative_path):
+    if getattr(sys, 'frozen', False):
+        if hasattr(sys, '_MEIPASS'):
+            base_path = Path(sys._MEIPASS)
+        else:
+            base_path = Path(sys.executable).parent
+    else:
+        base_path = Path(__file__).parent.parent
+    
+    resource_path = base_path / relative_path
+    if resource_path.exists():
+        return resource_path
+    
+    fallback_path = Path(sys.executable).parent / relative_path
+    if fallback_path.exists():
+        return fallback_path
+    
+    return resource_path
 
 def ensure_directory(path):
     Path(path).mkdir(parents=True, exist_ok=True)
@@ -49,15 +87,42 @@ def is_linux():
 def get_shell_command():
     if is_windows():
         return "cmd.exe"
+    elif is_macos():
+        return "/bin/zsh"
     else:
         return "/bin/bash"
+
+def get_python_executable():
+    if is_windows():
+        return "python"
+    else:
+        return "python3"
+
+def get_system_python_executable():
+    if getattr(sys, 'frozen', False):
+        best_python = get_best_python_interpreter()
+        if best_python != get_python_executable():
+            return best_python
+        
+        interpreters = detect_available_python_interpreters()
+        if interpreters:
+            return interpreters[0]['path']
+        
+        return get_python_executable()
+    else:
+        return get_python_executable()
 
 def build_command(tool_path, tool_command, parameters):
     command_parts = []
     
     if tool_command:
-        if is_windows() and tool_command.endswith('.py'):
-            command_parts.extend(["python", tool_command])
+        if tool_command.endswith('.py'):
+            python_exe = get_system_python_executable()
+            command_parts.extend([python_exe, tool_command])
+        elif tool_command.endswith('.sh') and not is_windows():
+            command_parts.extend(["/bin/bash", tool_command])
+        elif tool_command.endswith('.bat') and is_windows():
+            command_parts.extend(["cmd.exe", "/c", tool_command])
         else:
             command_parts.append(tool_command)
     else:
@@ -114,7 +179,6 @@ def get_config_dir():
     return ensure_directory(Path(config_dir) / "white_cat_toolbox")
 
 def get_app_data_dir():
-    """获取应用数据目录"""
     app_data_dir = QStandardPaths.writableLocation(QStandardPaths.AppDataLocation)
     return ensure_directory(Path(app_data_dir) / "white_cat_toolbox")
 
@@ -134,6 +198,66 @@ def validate_python_path(python_path):
         return result.returncode == 0
     except Exception:
         return False
+
+def detect_available_python_interpreters():
+    import shutil
+    interpreters = []
+    
+    if is_windows():
+        candidates = ['python.exe', 'python3.exe', 'py.exe']
+    else:
+        candidates = ['python3', 'python', 'python3.9', 'python3.10', 'python3.11', 'python3.12']
+    
+    for candidate in candidates:
+        python_path = shutil.which(candidate)
+        if python_path and validate_python_path(python_path):
+            version = get_python_version(python_path)
+            interpreters.append({
+                'path': python_path,
+                'version': version,
+                'name': candidate
+            })
+    
+    if is_windows():
+        common_paths = [
+            r'C:\Python39\python.exe',
+            r'C:\Python310\python.exe', 
+            r'C:\Python311\python.exe',
+            r'C:\Python312\python.exe'
+        ]
+        
+        username = os.environ.get('USERNAME', '')
+        if username:
+            user_paths = [
+                fr'C:\Users\{username}\AppData\Local\Programs\Python\Python39\python.exe',
+                fr'C:\Users\{username}\AppData\Local\Programs\Python\Python310\python.exe',
+                fr'C:\Users\{username}\AppData\Local\Programs\Python\Python311\python.exe',
+                fr'C:\Users\{username}\AppData\Local\Programs\Python\Python312\python.exe'
+            ]
+            common_paths.extend(user_paths)
+        
+        for path in common_paths:
+            if os.path.exists(path) and validate_python_path(path):
+                if not any(interp['path'] == path for interp in interpreters):
+                    version = get_python_version(path)
+                    interpreters.append({
+                        'path': path,
+                        'version': version,
+                        'name': os.path.basename(path)
+                    })
+    
+    return interpreters
+
+def get_best_python_interpreter():
+    interpreters = detect_available_python_interpreters()
+    if not interpreters:
+        return get_python_executable()
+    
+    python3_interpreters = [i for i in interpreters if 'python3' in i['name'].lower() or 'Python3' in i['version']]
+    if python3_interpreters:
+        return python3_interpreters[0]['path']
+    
+    return interpreters[0]['path']
 
 def get_python_version(python_path):
     try:

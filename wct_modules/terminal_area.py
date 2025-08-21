@@ -1361,6 +1361,8 @@ class TerminalArea(QWidget):
         
     def build_tool_command(self, tool_info, parameters):
         """构建工具执行命令"""
+        from .utils import get_system_python_executable
+        
         executable = getattr(tool_info, 'executable', 'python') or 'python'
         script_path = getattr(tool_info, 'script_path', None)
         
@@ -1377,7 +1379,11 @@ class TerminalArea(QWidget):
             if os.path.isabs(script_path) and hasattr(tool_info, 'path'):
                 script_path = os.path.relpath(script_path, tool_info.path)
             
-            command_parts = [executable, script_path]
+            if executable == 'python' or executable == 'python3':
+                system_python = get_system_python_executable()
+                command_parts = [system_python, script_path]
+            else:
+                command_parts = [executable, script_path]
         
 
         for param_name, param_value in parameters.items():

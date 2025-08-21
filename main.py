@@ -20,7 +20,6 @@ def main():
     app = QApplication(sys.argv)
     app.setStyle('Fusion')
     
-    # Set application icon
     favicon_path = Path(__file__).parent / "favicon.ico"
     if favicon_path.exists():
         app.setWindowIcon(QIcon(str(favicon_path)))

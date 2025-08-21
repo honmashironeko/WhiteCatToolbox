@@ -17,7 +17,6 @@ __version__ = '1.0.0'
 __author__ = 'WCT Team'
 __description__ = 'White Cat Toolbox - 多功能工具集成平台'
 
-# 导入主要类和函数
 from .main_window import MainWindow
 from .floating_toolbar import FloatingToolBar
 from .tool_operation import ToolOperationWidget

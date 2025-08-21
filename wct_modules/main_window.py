@@ -79,8 +79,8 @@ class MainWindow(QMainWindow):
         self.setWindowTitle("White Cat Toolbox")
         self.setMinimumSize(1200, 800)
         
-        # Set window icon using favicon.ico
-        favicon_path = get_project_root() / "favicon.ico"
+        from .utils import get_resource_path
+        favicon_path = get_resource_path("favicon.ico")
         if favicon_path.exists():
             self.setWindowIcon(QIcon(str(favicon_path)))
         self.resize(1600, 1000)
