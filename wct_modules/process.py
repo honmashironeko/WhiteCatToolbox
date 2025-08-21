@@ -166,23 +166,7 @@ class ProcessManager(QObject):
     def _start_output_monitoring(self, process_id, process):
         def monitor_output():
             try:
-                if hasattr(process, 'stdout') and process.stdout:
-                    while process.poll() is None:
-                        try:
-                            line = process.stdout.readline()
-                            if line:
-                                self.output_received.emit(process_id, line.rstrip())
-                        except Exception as e:
-                            print(f"读取输出失败: {e}")
-                            break
-                    
-                    try:
-                        remaining = process.stdout.read()
-                        if remaining:
-                            self.output_received.emit(process_id, remaining.rstrip())
-                    except Exception:
-                        pass
-                elif hasattr(process, 'read_output'):
+                if hasattr(process, 'read_output'):
                     while process.poll() is None:
                         try:
                             output = process.read_output(1024)
@@ -190,6 +174,12 @@ class ProcessManager(QObject):
                                 self.output_received.emit(process_id, output)
                         except Exception as e:
                             print(f"读取输出失败: {e}")
+                            break
+                else:
+                    for line in iter(process.stdout.readline, ''):
+                        if line:
+                            self.output_received.emit(process_id, line)
+                        if process.poll() is not None:
                             break
                             
                 exit_code = process.wait()
@@ -344,12 +334,46 @@ class PtyProcess:
                 
             def read_combined_output(self, size=4096):
                 """读取合并的stdout和stderr输出"""
+                output = ''
                 try:
                     if self.stdout:
-                        return self.stdout.read(size) or ''
+
+                        import select
+                        import sys
+                        
+                        if sys.platform == 'win32':
+
+                            try:
+
+                                stdout_data = self.stdout.read(size)
+                                if stdout_data:
+                                    output += stdout_data
+                            except:
+
+                                try:
+                                    line = self.stdout.readline()
+                                    if line:
+                                        output += line.rstrip()
+                                except:
+                                    pass
+                        else:
+
+                            if hasattr(self.stdout, 'fileno'):
+                                try:
+                                    import select
+                                    ready, _, _ = select.select([self.stdout.fileno()], [], [], 0)
+                                    if ready:
+                                        stdout_data = self.stdout.read(size)
+                                        if stdout_data:
+                                            output += stdout_data
+                                except ImportError:
+                                    # Fallback without select
+                                    stdout_data = self.stdout.read(size)
+                                    if stdout_data:
+                                        output += stdout_data
                 except Exception:
                     pass
-                return ''
+                return output
         
         process = subprocess.Popen(
             command_parts,
@@ -359,14 +383,144 @@ class PtyProcess:
             stdout=subprocess.PIPE,
             stderr=subprocess.STDOUT,
             text=True,
-            bufsize=1,
-            universal_newlines=True,
+            bufsize=0,
             startupinfo=startupinfo
         )
         
         return FallbackProcess(process)
         
+    def _start_output_monitoring(self, process_id, process):
+        def monitor_output():
+            try:
+                while True:
+                    output = None
+                    has_output = False
+                    
 
+                    if hasattr(process, 'read_output'):
+
+                        output = process.read_output(4096)
+                        if output:
+                            has_output = True
+                    elif hasattr(process, 'read'):
+
+                        try:
+
+                            output = process.read(4096)
+                            if output:
+                                if isinstance(output, bytes):
+                                    output = output.decode('utf-8', errors='ignore')
+                                has_output = True
+                        except Exception as e:
+
+                            try:
+                                try:
+                                    import select
+                                    if hasattr(process, 'fileno'):
+                                        ready, _, _ = select.select([process.fileno()], [], [], 0)
+                                        if ready:
+                                            output = process.read(1024)
+                                            if output:
+                                                if isinstance(output, bytes):
+                                                    output = output.decode('utf-8', errors='ignore')
+                                                has_output = True
+                                except ImportError:
+                                    # Fallback without select
+                                    output = process.read(1024)
+                                    if output:
+                                        if isinstance(output, bytes):
+                                            output = output.decode('utf-8', errors='ignore')
+                                        has_output = True
+                            except Exception:
+                                pass
+                    elif hasattr(process, 'read_combined_output'):
+
+                        try:
+                            output = process.read_combined_output(4096)
+                            if output:
+                                has_output = True
+                        except Exception:
+
+                            try:
+                                if hasattr(process, 'stdout') and process.stdout:
+                                    line = process.stdout.readline()
+                                    if line:
+                                        output = line.rstrip()
+                                        has_output = True
+                            except Exception:
+                                pass
+                    elif hasattr(process, 'stdout') and process.stdout:
+
+                        try:
+
+                            lines = []
+                            while True:
+                                line = process.stdout.readline()
+                                if not line:
+                                    break
+                                lines.append(line.rstrip())
+
+                                if len(lines) >= 10:
+                                    break
+                            if lines:
+                                output = '\n'.join(lines)
+                                has_output = True
+                        except Exception:
+                            pass
+                    
+                    if has_output and output:
+                        self.output_received.emit(process_id, output)
+                    
+
+                    if process.poll() is not None:
+
+                        try:
+
+                            for _ in range(5):
+                                remaining_output = None
+                                if hasattr(process, 'read'):
+                                    remaining_output = process.read(8192)
+                                    if remaining_output:
+                                        if isinstance(remaining_output, bytes):
+                                            remaining_output = remaining_output.decode('utf-8', errors='ignore')
+                                elif hasattr(process, 'read_combined_output'):
+
+                                    remaining_output = process.read_combined_output(8192)
+                                elif hasattr(process, 'stdout') and process.stdout:
+                                    remaining_output = process.stdout.read()
+                                    if remaining_output:
+                                        remaining_output = remaining_output.rstrip()
+                                
+                                if remaining_output:
+                                    self.output_received.emit(process_id, remaining_output)
+                                else:
+                                    break
+                                    
+
+                                import time
+                                time.sleep(0.001)
+                        except Exception:
+                            pass
+                        break
+                        
+
+                    import time
+                    time.sleep(0.005)
+                        
+                exit_code = process.wait()
+                self.process_finished.emit(process_id, exit_code)
+                
+                if process_id in self.processes:
+                    del self.processes[process_id]
+                if process_id in self.output_threads:
+                    del self.output_threads[process_id]
+                    
+            except Exception as e:
+                self.error_occurred.emit(process_id, f"输出监控错误: {str(e)}")
+                
+        thread = threading.Thread(target=monitor_output, daemon=True)
+        thread.start()
+        self.output_threads[process_id] = thread
         
     def send_input(self, process_id, text):
         if process_id in self.processes:

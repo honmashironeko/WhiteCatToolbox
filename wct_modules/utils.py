@@ -98,18 +98,80 @@ def get_python_executable():
     else:
         return "python3"
 
-def get_system_python_executable():
+def get_configured_python_executable(tool_info):
+    """获取工具配置中的Python解释器路径"""
+    if not tool_info:
+        return None
+        
+    interpreter_candidates = []
+    
+    try:
+        from pathlib import Path
+        import json
+        
+        if getattr(sys, 'frozen', False):
+            base_dir = Path(sys.executable).parent
+        else:
+            base_dir = Path(__file__).parent.parent
+            
+        config_dir = base_dir / 'config'
+        app_config_file = config_dir / 'app_config.json'
+        
+        if app_config_file.exists():
+            with open(app_config_file, 'r', encoding='utf-8') as f:
+                app_config = json.load(f)
+                
+            tool_name = getattr(tool_info, 'name', None)
+            if tool_name and 'tool_command' in app_config and tool_name in app_config['tool_command']:
+                tool_config = app_config['tool_command'][tool_name]
+                interpreter_path = tool_config.get('interpreter_path', '')
+                
+                if interpreter_path and interpreter_path.strip():
+                    interpreter_candidates.append(interpreter_path.strip())
+                        
+        if hasattr(tool_info, 'config_data') and tool_info.config_data:
+            interpreter_path = tool_info.config_data.get('interpreter_path', '')
+            if interpreter_path and interpreter_path.strip():
+                interpreter_candidates.append(interpreter_path.strip())
+                
+        for candidate in interpreter_candidates:
+            if os.path.exists(candidate) and validate_python_path(candidate):
+                return candidate
+            elif not os.path.isabs(candidate):
+                import shutil
+                full_path = shutil.which(candidate)
+                if full_path and validate_python_path(full_path):
+                    return full_path
+                    
+    except Exception:
+        pass
+        
+    return None
+
+def get_system_python_executable(tool_info=None):
+    configured_python = get_configured_python_executable(tool_info) if tool_info else None
+    if configured_python:
+        return configured_python
+        
     if getattr(sys, 'frozen', False):
-        return sys.executable
+        best_python = get_best_python_interpreter()
+        if best_python != get_python_executable():
+            return best_python
+        
+        interpreters = detect_available_python_interpreters()
+        if interpreters:
+            return interpreters[0]['path']
+        
+        return get_python_executable()
     else:
         return get_python_executable()
 
-def build_command(tool_path, tool_command, parameters):
+def build_command(tool_path, tool_command, parameters, tool_info=None):
     command_parts = []
     
     if tool_command:
         if tool_command.endswith('.py'):
-            python_exe = get_system_python_executable()
+            python_exe = get_system_python_executable(tool_info)
             command_parts.extend([python_exe, tool_command])
         elif tool_command.endswith('.sh') and not is_windows():
             command_parts.extend(["/bin/bash", tool_command])
@@ -181,13 +243,11 @@ def get_cache_dir():
 def validate_python_path(python_path):
     try:
         import subprocess
-        startupinfo = create_startup_info()
         result = subprocess.run(
             [python_path, "--version"], 
             capture_output=True, 
             text=True, 
-            timeout=5,
-            startupinfo=startupinfo
+            timeout=5
         )
         return result.returncode == 0
     except Exception:
@@ -256,13 +316,11 @@ def get_best_python_interpreter():
 def get_python_version(python_path):
     try:
         import subprocess
-        startupinfo = create_startup_info()
         result = subprocess.run(
             [python_path, "--version"], 
             capture_output=True, 
             text=True, 
-            timeout=5,
-            startupinfo=startupinfo
+            timeout=5
         )
         if result.returncode == 0:
             return result.stdout.strip()

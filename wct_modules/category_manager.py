@@ -8,11 +8,7 @@ from pathlib import Path
 
 class CategoryManager:
     def __init__(self, config_dir: str = None):
-        if config_dir:
-            self.config_dir = Path(config_dir)
-        else:
-            from .utils import get_resource_path
-            self.config_dir = get_resource_path('config')
+        self.config_dir = Path(config_dir) if config_dir else Path(os.path.dirname(__file__)).parent / 'config'
         self.categories_file = self.config_dir / 'categories.json'
         self.custom_categories = {}
         self.tool_category_mapping = {}

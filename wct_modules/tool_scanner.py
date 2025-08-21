@@ -337,8 +337,6 @@ class ToolScanner:
                 
                 tool_info = ToolInfo(tool_name, str(tool_dir), config_data)
                 
-                self._load_tool_app_config(tool_info)
-                
 
                 self.tools[tool_name] = tool_info
                 if tool_info.has_required_files():
@@ -348,42 +346,6 @@ class ToolScanner:
                     
         except Exception as e:
             print(f"扫描工具 {tool_dir.name} 时出错: {e}")
-    
-    def _load_tool_app_config(self, tool_info):
-        """从app_config.json加载工具配置数据"""
-        try:
-            from .utils import get_resource_path
-            import json
-            
-            config_dir = get_resource_path('config')
-            app_config_file = config_dir / 'app_config.json'
-            
-            if app_config_file.exists():
-                with open(app_config_file, 'r', encoding='utf-8') as f:
-                    app_config = json.load(f)
-                    
-                tool_name = tool_info.name
-                if 'tool_command' in app_config and tool_name in app_config['tool_command']:
-                    tool_config = app_config['tool_command'][tool_name]
-                    
-                    if not hasattr(tool_info, 'config_data') or not tool_info.config_data:
-                        tool_info.config_data = {}
-                    
-                    if 'interpreter_type' in tool_config:
-                        tool_info.config_data['interpreter_type'] = tool_config['interpreter_type']
-                    if 'interpreter_path' in tool_config:
-                        tool_info.config_data['interpreter_path'] = tool_config['interpreter_path']
-                    if 'program_path' in tool_config:
-                        tool_info.config_data['program_path'] = tool_config['program_path']
-                    if 'env_type' in tool_config:
-                        tool_info.config_data['env_type'] = tool_config['env_type']
-                    if 'env_path' in tool_config:
-                        tool_info.config_data['env_path'] = tool_config['env_path']
-                    if 'env_vars' in tool_config:
-                        tool_info.config_data['env_vars'] = tool_config['env_vars']
-                        
-        except Exception as e:
-            print(f"加载工具 {tool_info.name} 的配置数据失败: {e}")
         
     def _organize_categories(self):
         for tool_name, tool_info in self.tools.items():

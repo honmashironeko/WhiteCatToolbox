@@ -178,9 +178,8 @@ class MainWindow(QMainWindow):
         
     def load_tools(self):
         try:
-            from .utils import get_resource_path
-            tools_dir = get_resource_path("tools")
-            self.tool_scanner.scan_tools(str(tools_dir))
+            tools_dir = os.path.join(os.path.dirname(os.path.dirname(__file__)), "tools")
+            self.tool_scanner.scan_tools(tools_dir)
             
 
             if hasattr(self, 'floating_toolbar'):
