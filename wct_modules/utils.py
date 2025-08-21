@@ -36,36 +36,17 @@ def get_executable_path():
 
 def get_project_root():
     if getattr(sys, 'frozen', False):
-        if hasattr(sys, '_MEIPASS'):
-            base_path = Path(sys._MEIPASS)
-        else:
-            base_path = Path(sys.executable).parent
-        
-        for potential_root in [base_path, base_path.parent]:
-            if (potential_root / "tools").exists() or (potential_root / "config").exists():
-                return potential_root
-        return base_path
+        return Path(sys.executable).parent
     else:
         return Path(__file__).parent.parent
 
 def get_resource_path(relative_path):
     if getattr(sys, 'frozen', False):
-        if hasattr(sys, '_MEIPASS'):
-            base_path = Path(sys._MEIPASS)
-        else:
-            base_path = Path(sys.executable).parent
+        base_path = Path(sys.executable).parent
     else:
         base_path = Path(__file__).parent.parent
     
-    resource_path = base_path / relative_path
-    if resource_path.exists():
-        return resource_path
-    
-    fallback_path = Path(sys.executable).parent / relative_path
-    if fallback_path.exists():
-        return fallback_path
-    
-    return resource_path
+    return base_path / relative_path
 
 def ensure_directory(path):
     Path(path).mkdir(parents=True, exist_ok=True)
